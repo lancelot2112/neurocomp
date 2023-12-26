@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
-project(BinaryAI VERSION 1.0 LANGUAGES C)
-set(CMAKE_C_STANDARD 11)
+project(BinaryAI VERSION 1.0 LANGUAGES C CXX)
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(src)
 

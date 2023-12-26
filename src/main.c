@@ -11,11 +11,11 @@
 
 int main(int argc, char *argv[]) {
 
-    binvec_t a = binvec_rand(10000, 100);
-    binvec_t b = binvec_rand(10000, 100);
-    binvec_add(a, b);
-    binvec_print(a);
+    binvec_t *a = binvec_rand(10000, 100);
+    binvec_t *b = binvec_rand(10000, 100);
+    //binvec_add(a, b);
+    //binvec_print(a);
 
-    binvec_free(&a);
-    binvec_free(&b);
+    binvec_free(a);
+    binvec_free(b);
 }
