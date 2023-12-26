@@ -8,7 +8,7 @@
 binvec_t binvec_rand(int length, int num_bits_set){
   binvec_t a;
   a.length = length;
-  a.data = malloc(sizeof(int)*length);
+  a.data = malloc(length>>3);
   for(int i = 0; i < length; i++){
     a.data[i] = 0;
   }
@@ -20,9 +20,9 @@ binvec_t binvec_rand(int length, int num_bits_set){
   return a;
 }
 
-binvec_t binvec_free(binvec_t a){
-  free(a.data);
-  return a;
+void binvec_free(binvec_t *a){
+  free(a->data);
+  free(a);
 }
 
 //a function to xor two binary vectors together and return the result
