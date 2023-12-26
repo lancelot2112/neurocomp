@@ -1,6 +1,6 @@
-#include "binvec.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "binvec.h"
 
 //a function to create a random binary vector with a given length and a given number of bits set
 // Parameters: the length of the vector and the number of bits to set
