@@ -25,11 +25,25 @@ binvec_t *binvec_new(uint32_t bitCount){
   //add another segment if the bitCount is not an even divisor of 32
   a->segCount += ((bitCount & 31) > 0);
   a->data = malloc(sizeof(uint32_t)*a->segCount);
+  return a;
+}
+
+binvec_t *binvec_zero(uint32_t bitCount){
+  binvec_t *a = binvec_new(bitCount);
   for(int i = 0; i < a->segCount; ++i){
     a->data[i] = 0;
   }
   return a;
 }
+
+binvec_t *binvec_copy(binvec_t *original){
+  binvec_t *a = binvec_new(original->bitCount);
+  for(int i = 0; i < a->segCount; ++i){
+    a->data[i] = original->data[i];
+  }
+  return a;
+}
+
 //a function to create a random binary vector with a given segCount and a given number of bits set
 // Parameters: the segCount of the vector and the number of bits to set
 // Returns: a binary vector
@@ -50,11 +64,60 @@ void binvec_free(binvec_t *a){
 //a function to xor two binary vectors together and return the result
 // Parameters: two binary vectors
 // Returns: a binary vector
-binvec_t binvec_xor(binvec_t a, binvec_t b){
+binvec_t *binvec_xor(binvec_t a, binvec_t b){
+  binvec_t *c = binvec_new(a.bitCount);
   for(int i = 0; i < a.segCount; i++){
-    a.data[i] = a.data[i] ^ b.data[i];
+    c->data[i] = a.data[i] ^ b.data[i];
   }
-  return a;
+  return c;
+}
+
+binvec_t *binvec_xnor(binvec_t a, binvec_t b){
+  binvec_t *c = binvec_new(a.bitCount);
+  for(int i = 0; i < a.segCount; i++){
+    c->data[i] = ~(a.data[i] ^ b.data[i]);
+  }
+  return c;
+}
+
+binvec_t *binvec_or(binvec_t a, binvec_t b){
+  binvec_t *c = binvec_new(a.bitCount);
+  for(int i = 0; i < a.segCount; i++){
+    c->data[i] = a.data[i] | b.data[i];
+  }
+  return c;
+}
+
+binvec_t *binvec_and(binvec_t a, binvec_t b){
+  binvec_t *c = binvec_new(a.bitCount);
+  for(int i = 0; i < a.segCount; i++){
+    c->data[i] = a.data[i] & b.data[i];
+  }
+  return c;
+}
+
+binvec_t *binvec_not(binvec_t a){
+  binvec_t *c = binvec_new(a.bitCount);
+  for(int i = 0; i < a.segCount; i++){
+    c->data[i] = ~a.data[i];
+  }
+  return c;
+}
+
+binvec_t *binvec_nand(binvec_t a, binvec_t b){
+  binvec_t *c = binvec_new(a.bitCount);
+  for(int i = 0; i < a.segCount; i++){
+    c->data[i] = ~(a.data[i] & b.data[i]);
+  }
+  return c;
+}
+
+binvec_t *binvec_nor(binvec_t a, binvec_t b){
+  binvec_t *c = binvec_new(a.bitCount);
+  for(int i = 0; i < a.segCount; i++){
+    c->data[i] = ~(a.data[i] | b.data[i]);
+  }
+  return c;
 }
 
 //a function to add binary vectors together and return the result, overflow should be added 

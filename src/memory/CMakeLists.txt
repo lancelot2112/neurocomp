@@ -2,7 +2,7 @@ add_library(memory "")
 
 target_sources(memory
 PRIVATE
-    mem_hashed.c)
+    mem_bundles.c)
 
 target_include_directories(memory
 PUBLIC
