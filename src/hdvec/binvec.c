@@ -18,27 +18,26 @@
 #include "binvec.h"
 
 //a function to create a new binary vector with a given bitCount
-binvec_t *binvec_new(uint32_t bitCount){
+binvec_t *binvec_new(uint32_t bitCount, uint32_t setBitCnt){
   binvec_t *a = malloc(sizeof(binvec_t));
   //Calculate the number of 32bit segments to create
   a->bitCount = bitCount;
-  a->setCount = bitCount>>5;
-  //add another segment if the bitCount is not an even divisor of 32
-  a->setCount += ((bitCount & 31) > 0);
-  a->setBits = malloc(sizeof(uint32_t)*a->setCount);
-  return a;
-}
-
-binvec_t *binvec_zero(uint32_t bitCount){
-  binvec_t *a = binvec_new(bitCount);
-  for(int i = 0; i < a->setCount; ++i){
-    a->setBits[i] = 0;
+  a->setCount = setBitCnt;
+  if(setBitCnt > 0) {
+    a->setBits = malloc(sizeof(uint32_t)*a->setCount);
+  } else {
+    a->setBits = NULL;
   }
   return a;
 }
 
+binvec_t *binvec_zero(uint32_t bitCount){
+  binvec_t *a = binvec_new(bitCount, 0);
+  return a;
+}
+
 binvec_t *binvec_copy(binvec_t *original){
-  binvec_t *a = binvec_new(original->bitCount);
+  binvec_t *a = binvec_new(original->bitCount, original->setCount);
   for(int i = 0; i < a->setCount; ++i){
     a->setBits[i] = original->setBits[i];
   }
@@ -50,10 +49,11 @@ binvec_t *binvec_copy(binvec_t *original){
 // Parameters: the setCount of the vector and the number of bits to set
 // Returns: a binary vector
 binvec_t *binvec_rand(uint32_t bitCount, uint32_t bitsSetCnt){
-  binvec_t *l_rand = binvec_new(bitCount);
+  binvec_t *l_rand = binvec_new(bitCount, bitsSetCnt);
+  uint32_t bit = 0;
   for(uint32_t i = 0; i < bitsSetCnt; i++){
-    uint32_t bit = (uint32_t)(rand() % bitsSetCnt);
-    l_rand->setBits[bit >> 5] |= (1 << (bit & 31));
+    bit += rand() % (bitCount / bitsSetCnt);
+    l_rand->setBits[i] = bit;
   }
   return l_rand;
 }
@@ -66,8 +66,12 @@ void binvec_free(binvec_t *a){
 //a function to xor two binary vectors together and return the result
 // Parameters: two binary vectors
 // Returns: a binary vector
-binvec_t binvec_xor(binvec_t a, binvec_t b){
+binvec_t binvec_bind(binvec_t a, binvec_t b){
+  int j = 0; 
   for(int i = 0; i < a.setCount; i++){
+    while(j < b.setCount && b.setBits[j] < a.setBits[i]){
+      j++;
+    }
     a.setBits[i] = a.setBits[i] ^ b.setBits[i];
   }
   return a;
@@ -77,7 +81,7 @@ binvec_t binvec_xor(binvec_t a, binvec_t b){
 // to the next value in the vector.
 // Parameters: two binary vectors
 // Returns: a binary vector
-binvec_t binvec_add(binvec_t a, binvec_t b){
+binvec_t binvec_bundle(binvec_t a, binvec_t b){
   uint32_t carry = 0;
   uint64_t temp;
   for(int i = 0; i<a.setCount; i++){
