@@ -16,16 +16,17 @@
 #include <stdint.h>
 
 typedef struct {
-    uint32_t *data;
+    uint32_t *setBits;
     uint32_t bitCount;
-    uint32_t segCount;
+    uint32_t setCount;
 } binvec_t;
 
 binvec_t *binvec_new(uint32_t bitCount);
+binvec_t *binvec_zero(uint32_t bitCount);
+binvec_t *binvec_copy(binvec_t *original);
 binvec_t *binvec_rand(uint32_t bitCount, uint32_t bitsSetCnt);
 void binvec_free(binvec_t *vec);
-void binvec_print(binvec_t vec);
-
+void binvec_print_segments(binvec_t vec);
 
 binvec_t binvec_permute(binvec_t a, int amount);
 binvec_t binvec_add(binvec_t a, binvec_t b);
