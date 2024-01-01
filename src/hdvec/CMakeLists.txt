@@ -1,4 +1,4 @@
-add_library(hdvec "")
+add_library(hdvec STATIC)
 
 target_sources(hdvec
 PRIVATE
