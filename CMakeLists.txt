@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+#set_compiler_options(-Wall)
+
+#set_compiler_options(--coverage -fprofile-arcs -ftest-coverage)
+
 add_subdirectory(src)
 
 enable_testing()

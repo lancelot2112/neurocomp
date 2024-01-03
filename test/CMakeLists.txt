@@ -13,6 +13,7 @@ target_link_libraries(testBinaryAI
 PRIVATE
     hdvec 
     memory
+    nodes
     Catch2::Catch2WithMain)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)

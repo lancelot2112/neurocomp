@@ -61,7 +61,7 @@ SCENARIO("Bundling two mostly orthogonal vectors", "[membndl]"){
 
         //Show that the and bits remained set in the bundle
         binvec_t *l_andChk = binvec_and(l_and, l_bundle);
-        uint32_t l_dist = binvec_distham(l_and, l_andChk);
+        float l_dist = binvec_distham(l_and, l_andChk);
         GIVEN("The bitwise AND of the bundle and the AND of the originals") {
             THEN("Coincident bits should be the same (hamming distance should measure 0)") {
                 INFO("Hamming distance: " << l_dist);
