@@ -16,10 +16,6 @@
 #include <stdlib.h>
 #include "node.h"
 
-nodeout_t *nodeOuts;
-uint32_t nodeOutCount = 0;
-uint32_t nodeOutUsed = 0;
-
 node_t *nodes;
 uint32_t nodeCount = 0;
 uint32_t nodeUsed = 0;
@@ -28,11 +24,7 @@ node_t **activeNodes;
 uint32_t activeNodeCount;
 uint32_t activeNodeUsed;
 
-nodeout_t **activeNodeOut;
-uint32_t activeNodeOutCount;
-uint32_t activeNodeOutUsed;
-
-int32_t nodeLowValue = -128;
+uint32_t simTime = 0;
 
 node_t *node_new(uint32_t outputCount){
     if(nodeUsed >= nodeCount) {
@@ -44,25 +36,22 @@ node_t *node_new(uint32_t outputCount){
     node->output = malloc(sizeof(nodeout_t*) * outputCount);
     node->value = 0;
     node->state = NODE_STATE_INACTIVE;
-    node->threshold = 0;
-    node->outputCount = 0;
+    node->threshold = 500;
+    node->outputUsed = 0;
+    node->spikeDelta = node->threshold;
+    node->spikeTime = -5;
     return node;
 }
 
-nodeout_t *nodeout_new(node_t *node, uint16_t delay, int8_t weight){
-    if(nodeOutUsed >= nodeOutCount) {
-        nodeOutCount += 500;
-        nodeOuts = realloc(nodeOuts, sizeof(nodeout_t) * nodeOutCount);
+void node_connect(node_t *source, nodeout_t *out) {
+    if(source->outputUsed >= source->outputCount) {
+        source->outputCount += 10;
+        source->output = realloc(source->output, sizeof(nodeout_t*) * source->outputCount);
     }
-    nodeout_t *out = (nodeOuts + nodeOutUsed++);
-    out->node = (void*)node;
-    out->delay = delay;
-    out->delaySet = delay;
-    out->weight = weight;
-    return out;
+    source->output[source->outputUsed++] = out;
 }
 
-static inline void node_active(node_t *node){
+static inline void node_queue(node_t *node){
     if(activeNodeUsed >= activeNodeCount) {
         activeNodeCount += 500;
         activeNodes = realloc(activeNodes, sizeof(node_t*) * activeNodeCount);
@@ -70,62 +59,38 @@ static inline void node_active(node_t *node){
     activeNodes[activeNodeUsed++] = node;
 }
 
-static inline void nodeout_active(nodeout_t *out){
-    if(activeNodeOutUsed >= activeNodeOutCount) {
-        activeNodeOutCount += 500;
-        activeNodeOut = realloc(activeNodeOut, sizeof(nodeout_t*) * activeNodeOutCount);
-    }
-    activeNodeOut[activeNodeOutUsed++] = out;
-}
+void node_trigger(nodeout_t *input){
+    node_t *node = (node_t *)input->node;
+    node->value += input->weight;
 
-static inline void node_stimulate(node_t *node, int8_t value){
-    node += value;
+    //Check if already in simulation queue
     if(node->state == NODE_STATE_INACTIVE){
         node->state = NODE_STATE_TOWARDZERO;
-        node_active(node);
+        node_queue(node);
+    }
+
+    //Fire if above threshold and begin output propogation
+    if(node->value > node->threshold && simTime != node->spikeTime) {         
+        node->value -= node->threshold << 1;
+        node->spikeTime = simTime;
+        for(int j = 0; j < node->outputCount; j++){
+            nodeout_trigger(node->output[j]);
+        }
     }
 }
 
-static inline void nodeout_stimulate(nodeout_t *out){
-    out->delay = out->delaySet;
-    nodeout_active(out);
-}
-
-static inline void node_propogate(node_t *node){
-    if(node->value > 0) {
-        if(node->state & NODE_STATE_FIRING) {
-            node->value -= 5;
-            if(node->value <= nodeLowValue) {
-                node->value = nodeLowValue;
-                node->state &= ~NODE_STATE_FIRING;
-            }
-        }
-        else if(node->value > node->threshold) {           
-            node->state |= NODE_STATE_FIRING;
-            for(int j = 0; j < node->outputCount; j++){
-                nodeout_stimulate(node->output[j]);
-            }
-        } else {
-            node->value--;
-        }
-    } else if (node->value < 0) {
-        node->value++;
-    }
-
-    if(node->value == 0 && ((node->state & NODE_STATE_FIRING) == 0)) {
+static inline void node_update(node_t *node){
+    //int32_t mask = node->value >> 31;
+    //int32_t delta = (node->value >> 3) & (~((node->value > 5) || (node->value < -5))+1);
+    //delta = (delta == 0) | delta;
+    //node->value -= delta & (~(node->value > 0) + 1);
+    //node->value += delta & (~(node->value < 0) + 1); 
+    if(node->value > 5 || node->value < -5) {
+        node->value -= (node->value >> 4); //Quadratic decay
+        node_queue(node);
+    } else {
+        node->value = 0;
         node->state = NODE_STATE_INACTIVE;
-    } else {
-        node_active(node);
-    }
-}
-
-static inline void nodeout_propogate(nodeout_t *out){
-    node_t *node = (node_t*)out->node;
-    if(out->delay > 0){
-        out->delay--;
-        nodeout_active(out);
-    } else {
-        node_stimulate(node, out->weight);
     }
 }
 
@@ -133,27 +98,18 @@ void nodesim_init(uint32_t count){
     nodeCount = count;
     nodeUsed = 0;
     nodes = malloc(sizeof(node_t) * nodeCount);
-    nodeOutCount = count * 5;
-    nodeOutUsed = 0;
-    nodeOuts = malloc(sizeof(nodeout_t) * nodeOutCount);
     activeNodeCount = nodeCount>>4;
     activeNodeUsed = 0;
     activeNodes = malloc(sizeof(node_t*) * nodeCount/2);
-    activeNodeOutCount = nodeOutCount >> 4;
-    activeNodeOutUsed = 0;
-    activeNodeOut = malloc(sizeof(nodeout_t*) * nodeOutCount/2);
+    simTime = 0;
+
 }
 
 void nodesim_step(void) {
     int l_activeNodeCount = activeNodeCount;
     activeNodeCount = 0;
-    int l_activeNodeOutCount = activeNodeOutCount;
-    activeNodeOutCount = 0;
     for(int i = 0; i < l_activeNodeCount; i++){
-        node_propogate(activeNodes[i]);
+        node_update(activeNodes[i]);
     }
-
-    for(int i = 0; i < l_activeNodeOutCount; i++){
-        nodeout_propogate(activeNodeOut[i]);
-    }
+    simTime++;
 }

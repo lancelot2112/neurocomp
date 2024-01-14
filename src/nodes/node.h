@@ -17,19 +17,13 @@
 #define NODE_H
 
 #include <stdint.h>
+#include "nodeout.h"
 
 typedef enum {
     NODE_STATE_INACTIVE,
     NODE_STATE_TOWARDZERO,
     NODE_STATE_FIRING = 0x8000
 } node_state_t;
-
-typedef struct {
-    void *node;
-    uint16_t delay;
-    uint16_t delaySet;
-    int8_t weight;
-} nodeout_t;
 
 typedef struct {
     uint8_t temperature;
@@ -39,10 +33,17 @@ typedef struct {
     nodeout_t **output; // Nodes this node outputs to
     nodetmptr_t *temperature; // Nodes sharing an area in the graph will have the same temperature
     uint32_t outputCount; // Number of outputs
-    uint32_t activeOutputs; // Number of outputs that are firing
+    uint32_t outputUsed; // Number of outputs used
     int32_t value;  // Current value of the node
+    uint32_t spikeTime; // Time this node last fired
     uint16_t threshold;
+    uint16_t spikeDelta; // Amount to decrease value when firing
     uint8_t state;
 } node_t;
+
+node_t *node_new(uint32_t outputCount);
+void node_connect(node_t *source, nodeout_t *out);
+void node_trigger(nodeout_t *input);
+
 
 #endif

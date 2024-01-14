@@ -3,9 +3,11 @@ add_library(nodes STATIC)
 target_sources(nodes
 PRIVATE
     node.c
-    #node_predictive.c
+    nodeout.c
+    node_predictive.c
 PUBLIC
     node.h
+    nodeout.h
 )
 
 target_include_directories(nodes  
