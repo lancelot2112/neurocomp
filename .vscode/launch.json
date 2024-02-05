@@ -13,5 +13,15 @@
         "environment": [{ "name": "config", "value": "Debug" }],
         "cwd": "${workspaceFolder}"
         }
+        {
+        "name": "Main Launch",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/build/src/BinaryAI",
+        "args": [],
+        "environment": [{ "name": "config", "value": "Debug" }],
+        "cwd": "${workspaceFolder}"
+        }
+
     ]
 }

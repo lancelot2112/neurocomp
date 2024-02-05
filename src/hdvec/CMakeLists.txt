@@ -4,7 +4,8 @@ target_sources(hdvec
 PRIVATE
     binvec.c
 PUBLIC
-    binvec.h)
+    binvec.h
+    linmath.h)
 
 target_include_directories(hdvec
 PUBLIC
