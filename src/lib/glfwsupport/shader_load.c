@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <glsupport.h>
+#include <glfwsupport.h>
 
 char* get_shader_content(const char* fileName)
 {
@@ -34,10 +34,14 @@ void compile_shader(GLuint* shaderId, GLenum shaderType, const char* shaderFileP
     GLint isCompiled = 0;
     /* Calls the Function that loads the Shader source code from a file */
     const char* shaderSource = get_shader_content(shaderFilePath); 
+    if(shaderSource == "") {
+        printf("Could not load shader file: %s\n", shaderFilePath);
+        return;
+    }
 
     *shaderId = glCreateShader(shaderType);
     if(*shaderId == 0) {
-        printf("COULD NOT LOAD SHADER: %s!\n", shaderFilePath);
+        printf("Could not create shader: %s!\n", shaderFilePath);
     }
 
     glShaderSource(*shaderId, 1, (const char**)&shaderSource, NULL);
@@ -92,7 +96,7 @@ GLuint link_shader(GLuint vertexShaderID, GLuint fragmentShaderID)
     return programID;
 }
 
-GLuint glSuppGetShader(const char *vertexPath, const char *fragmentPath) {
+GLuint glfwSuppGetShaderProg(const char *vertexPath, const char *fragmentPath) {
     GLuint vertexShaderID = 0;
     GLuint fragmentShaderID = 0;
 

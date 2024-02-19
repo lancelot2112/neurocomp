@@ -11,12 +11,13 @@
 //#include <getopt.h>
 #include <linmath.h>
 
-#include <glsupport.h>
+#include <glfwsupport.h>
 //#define GLAD_GL_IMPLEMENTATION
 //#include <glad.h>
 
 //#include <GLFW/glfw3.h>
 #include "binvec.h"
+#include "triangle_shaders.h"
 
 void error_callback(int error, const char* description)
 {
@@ -57,6 +58,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 int main(int argc, char *argv[]) {
 
     int err_code = 0;
+    GLuint shaderProgram;
     //binvec_t *a = binvec_rand(10000, 100);
     //binvec_t *b = binvec_rand(10000, 100);
 
@@ -95,6 +97,19 @@ int main(int argc, char *argv[]) {
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    //Get shader
+    readlink("/prog/self/exe", argv[0],1024);
+    printf("argv[0]: %s\n", argv[0]);
+
+    char *vertexPath, *fragmentPath;
+    vertexPath = malloc(1024);
+    fragmentPath = malloc(1024);
+    strcpy(vertexPath, argv[0]);
+    strcpy(fragmentPath, argv[0]);
+    strcat(vertexPath, "/shaders/triangle.vs");
+    strcat(fragmentPath, "/shaders/vert_color.fs");
+    shaderProgram = glfwSuppGetShaderProg(vertexPath, fragmentPath);
     
     //Main loop
     while(!glfwWindowShouldClose(window)) {
@@ -102,6 +117,9 @@ int main(int argc, char *argv[]) {
         //Rendering goes here
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        //Draw the triangle
+        glUseProgram(shaderProgram);
 
         //Check and call events and swap the buffers
         glfwSwapBuffers(window);

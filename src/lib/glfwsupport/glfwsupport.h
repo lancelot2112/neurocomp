@@ -6,6 +6,6 @@
 
 #include <GLFW/glfw3.h>
 
-GLuint glSuppGetShader(const char *vertexPath, const char *fragmentPath);
+GLuint glfwSuppGetShaderProg(const char *vertexPath, const char *fragmentPath);
 
 #endif // GLSUPPORT_H

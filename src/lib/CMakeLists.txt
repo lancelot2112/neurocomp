@@ -1,1 +1,2 @@
-add_subdirectory(glsupport)
+add_subdirectory(glfwsupport)
+add_subdirectory(resources)
