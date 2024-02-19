@@ -29,19 +29,20 @@ char* get_shader_content(const char* fileName)
     return shaderContent;
 }
 
-void compile_shader(GLuint* shaderId, GLenum shaderType, const char* shaderFilePath)
+void compile_shader(GLuint* shaderId, GLenum shaderType, const char* shaderSource, const char* shaderName)
 {
     GLint isCompiled = 0;
-    /* Calls the Function that loads the Shader source code from a file */
+    
+    /* Calls the Function that loads the Shader source code from a file 
     const char* shaderSource = get_shader_content(shaderFilePath); 
     if(shaderSource == "") {
         printf("Could not load shader file: %s\n", shaderFilePath);
         return;
-    }
+    }*/
 
     *shaderId = glCreateShader(shaderType);
     if(*shaderId == 0) {
-        printf("Could not create shader: %s!\n", shaderFilePath);
+        printf("Could not create shader: %s!\n", shaderName);
     }
 
     glShaderSource(*shaderId, 1, (const char**)&shaderSource, NULL);
@@ -49,7 +50,12 @@ void compile_shader(GLuint* shaderId, GLenum shaderType, const char* shaderFileP
     glGetShaderiv(*shaderId, GL_COMPILE_STATUS, &isCompiled);
 
     if(isCompiled == GL_FALSE) { /* Here You should provide more error details to the User*/
-        printf("Shader Compiler Error: %s\n", shaderFilePath);
+        GLsizei maxLength = 1024;
+        GLsizei length = 0;
+        GLchar* infoLog = (GLchar*)malloc(maxLength);
+        printf("Shader Compiler Error: %s\n", shaderName);
+        glGetShaderInfoLog(*shaderId, maxLength, &length, infoLog);
+        printf("%s\n", infoLog);
         glDeleteShader(*shaderId);
         return;
     }
@@ -59,8 +65,6 @@ GLuint link_shader(GLuint vertexShaderID, GLuint fragmentShaderID)
 {
     GLuint programID = 0;
     GLint isLinked = 0;
-    GLint maxLength = 0;
-    char* infoLog = malloc(1024);
 
     programID = glCreateProgram();
 
@@ -71,6 +75,8 @@ GLuint link_shader(GLuint vertexShaderID, GLuint fragmentShaderID)
 
     glGetProgramiv(programID, GL_LINK_STATUS, &isLinked);
     if(isLinked == GL_FALSE) {
+        GLint maxLength = 0;
+        char* infoLog = malloc(1024);
         printf("Shader Program Linker Error\n");
         
 	    glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &maxLength);
@@ -92,16 +98,15 @@ GLuint link_shader(GLuint vertexShaderID, GLuint fragmentShaderID)
 
     glDeleteShader(vertexShaderID);
     glDeleteShader(fragmentShaderID);
-    free(infoLog);
     return programID;
 }
 
-GLuint glfwSuppGetShaderProg(const char *vertexPath, const char *fragmentPath) {
+GLuint glfwSuppGetShaderProg(const char *vertexShader, const char *fragmentShader) {
     GLuint vertexShaderID = 0;
     GLuint fragmentShaderID = 0;
 
-    compile_shader(&vertexShaderID, GL_VERTEX_SHADER, vertexPath);
-    compile_shader(&fragmentShaderID, GL_FRAGMENT_SHADER, fragmentPath);
+    compile_shader(&vertexShaderID, GL_VERTEX_SHADER, vertexShader, "Vertex Shader");
+    compile_shader(&fragmentShaderID, GL_FRAGMENT_SHADER, fragmentShader, "Fragment Shader");
 
     return link_shader(vertexShaderID, fragmentShaderID);
 }

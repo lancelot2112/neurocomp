@@ -16,6 +16,8 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_executable(BinaryAI main.c)
 
+include_directories(${CMAKE_CURRENT_LIST_DIR})
+
 add_subdirectory(hdvec)
 add_subdirectory(memory)
 add_subdirectory(nodes)

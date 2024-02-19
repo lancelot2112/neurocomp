@@ -19,10 +19,10 @@ function(embed_resource resource_file_name source_file_name variable_name)
 
     string(REGEX REPLACE ", $" "" content "${content}")
 
-    set(array_definition "static const unsigned char ${variable_name}[] =\n{\n${content}\n};")
+    set(array_definition "static const unsigned char ${variable_name}[] =\n{\n${content}, 0x00\n};")
 
     set(source "// Auto generated file.\n${array_definition}\n")
 
-    file(WRITE "${source_file_name}" "${source}")
+    file(APPEND "${source_file_name}" "${source}")
 
 endfunction()

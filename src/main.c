@@ -17,7 +17,7 @@
 
 //#include <GLFW/glfw3.h>
 #include "binvec.h"
-#include "triangle_shaders.h"
+#include <lib/resources/shaders.h>
 
 void error_callback(int error, const char* description)
 {
@@ -90,6 +90,8 @@ int main(int argc, char *argv[]) {
         goto EXIT_CLEANUP;
     }
 
+    printf("%s\n",glGetString(GL_VERSION));
+
     //Set up callbacks
     glfwSetErrorCallback(error_callback);
     glfwSetKeyCallback(window, key_callback);
@@ -99,17 +101,7 @@ int main(int argc, char *argv[]) {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     //Get shader
-    readlink("/prog/self/exe", argv[0],1024);
-    printf("argv[0]: %s\n", argv[0]);
-
-    char *vertexPath, *fragmentPath;
-    vertexPath = malloc(1024);
-    fragmentPath = malloc(1024);
-    strcpy(vertexPath, argv[0]);
-    strcpy(fragmentPath, argv[0]);
-    strcat(vertexPath, "/shaders/triangle.vs");
-    strcat(fragmentPath, "/shaders/vert_color.fs");
-    shaderProgram = glfwSuppGetShaderProg(vertexPath, fragmentPath);
+    shaderProgram = glfwSuppGetShaderProg(vsTriangle, fsVertColor);
     
     //Main loop
     while(!glfwWindowShouldClose(window)) {
