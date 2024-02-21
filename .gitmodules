@@ -1,0 +1,6 @@
+[submodule "src/lib/cimgui"]
+	path = src/lib/cimgui
+	url = https://github.com/cimgui/cimgui.git
+[submodule "src/lib/nativefiledialog"]
+	path = src/lib/nativefiledialog
+	url = https://github.com/btzy/nativefiledialog-extended.git
