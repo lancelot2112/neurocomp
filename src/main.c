@@ -11,13 +11,13 @@
 //#include <getopt.h>
 #include <linmath.h>
 
-#include <glfwsupport.h>
+#include <glfw.h>
 //#define GLAD_GL_IMPLEMENTATION
 //#include <glad.h>
 
 //#include <GLFW/glfw3.h>
 #include "binvec.h"
-#include <lib/resources/shaders.h>
+#include <resources/shaders/shaders.h>
 
 void error_callback(int error, const char* description)
 {
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
     glDepthFunc(GL_LESS);
 
     //Get shader
-    GLuint shaderProgram = glfwSuppGetShaderProg(vsTriangle, fsVertColor);
+    GLuint shaderProgram = Shader_GetProg(vsTriangle, fsVertColor);
 
     //Set up vertex data (and buffer(s)) and attribute pointers
     float vertices[] = {

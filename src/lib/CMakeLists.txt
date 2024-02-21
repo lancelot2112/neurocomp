@@ -1,2 +1,1 @@
-add_subdirectory(glfwsupport)
-add_subdirectory(resources)
+add_subdirectory(glfwlib)

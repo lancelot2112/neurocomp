@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <glfwsupport.h>
+#include <glfw.h>
 
 char* get_shader_content(const char* fileName)
 {
@@ -101,7 +101,7 @@ GLuint link_shader(GLuint vertexShaderID, GLuint fragmentShaderID)
     return programID;
 }
 
-GLuint glfwSuppGetShaderProg(const char *vertexShader, const char *fragmentShader) {
+GLuint Shader_GetProg(const char *vertexShader, const char *fragmentShader) {
     GLuint vertexShaderID = 0;
     GLuint fragmentShaderID = 0;
 
