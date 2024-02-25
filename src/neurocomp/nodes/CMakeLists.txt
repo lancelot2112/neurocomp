@@ -1,6 +1,4 @@
-add_library(nodes STATIC)
-
-target_sources(nodes
+target_sources(neurocomp
 PRIVATE
     node.c
     nodeout.c
@@ -10,6 +8,6 @@ PUBLIC
     nodeout.h
 )
 
-target_include_directories(nodes  
+target_include_directories(neurocomp  
 PUBLIC
     ${CMAKE_CURRENT_LIST_DIR})

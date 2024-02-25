@@ -7,17 +7,15 @@ embed_resource("triangle.vs" "shadercode.h" "vsTriangle")
 embed_resource("vert_color.fs" "shadercode.h" "fsVertColor")
 file(APPEND "shadercode.h" "#endif\n")
 
-add_library(shaders STATIC)
-
-target_sources(shaders
+target_sources(resources
 PRIVATE
     shader_load.c
 PUBLIC
     shaders.h
 )
 
-target_include_directories(shaders
+target_include_directories(resources
 PUBLIC
     ${CMAKE_CURRENT_LIST_DIR})
 
-target_link_libraries(shaders PUBLIC glfwlib)
+target_link_libraries(resources PUBLIC thirdparty)

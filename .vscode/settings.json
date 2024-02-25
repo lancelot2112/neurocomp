@@ -1,3 +1,9 @@
 {
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
+    "C_Cpp.autocompleteAddParentheses": true,
+    "workbench.iconTheme": "vs-seti",
+    "files.associations": {
+        "*.c": "c",
+        "*.h": "c"
+    }
 }

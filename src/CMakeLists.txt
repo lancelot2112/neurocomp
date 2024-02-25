@@ -1,27 +1,14 @@
-include(FetchContent)
-
-FetchContent_Declare(
-    glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG        3.3.9
-)
-
-FetchContent_MakeAvailable(glfw)
-
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-
-#find_package( OpenGL REQUIRED )
-
 add_executable(BinaryAI main.c)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR})
 
-add_subdirectory(hdvec)
-add_subdirectory(memory)
-add_subdirectory(nodes)
-add_subdirectory(linmath)
+add_compile_options($<$<COMPILE_LANG_AND_ID:C,GNU>:-Werror=implicit-function-declaration>
+                    -Werror=return-type
+                    -Werror=uninitialized
+)
+
 add_subdirectory(lib)
 add_subdirectory(resources)
-target_link_libraries(BinaryAI PUBLIC hdvec memory nodes glfwlib shaders)
+add_subdirectory(neurocomp)
+
+target_link_libraries(BinaryAI PUBLIC neurocomp thirdparty resources)

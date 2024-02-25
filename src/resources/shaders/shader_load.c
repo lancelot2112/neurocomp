@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <glfw.h>
+#include <useglfw.h>
 
 char* get_shader_content(const char* fileName)
 {

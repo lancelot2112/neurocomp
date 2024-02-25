@@ -95,38 +95,93 @@ int main(int argc, char *argv[]) {
     printf("OpenGL version supported %s\n", version);
     printf("GLSL version supported: %s\n", glsl_version);
 
-    const char* glsl_header = "#version 430 core";
-    gui_init(window, glsl_header);
+    //const char* glsl_header = "#version 430 core";
+    //gui_init(window, glsl_header);
 
     //Set up callbacks
-    //glfwSetKeyCallback(window, key_callback);
-    //glfwSetMouseButtonCallback(window, mouse_button_callback);
-    //glfwSetCursorPosCallback(window, cursor_position_callback);
-    //glfwSetScrollCallback(window, scroll_callback);
-    //glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, cursor_position_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    //Get shader
+    GLuint shaderProgram = Shader_GetProg(vsTriangle, fsVertColor);
+
+    //Set up vertex data (and buffer(s)) and attribute pointers
+    float vertices[] = {
+        0.5f,  0.5f, 0.0f,  // top right
+        0.5f, -0.5f, 0.0f,  // bottom right
+        -0.5f, -0.5f, 0.0f,  // bottom left
+        -0.5f,  0.5f, 0.0f   // top left 
+    }; 
+    unsigned int indices[] = {  // note that we start from 0!
+        0, 1, 3,   // first triangle
+        1, 2, 3    // second triangle
+    }; 
+
+    GLuint vbo, vao, ebo;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+
+    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+    glBindBuffer(GL_ARRAY_BUFFER, 0); 
+
+    // remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+    glBindVertexArray(0); 
+
+
+    // uncomment this call to draw in wireframe polygons.
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 
     //Main loop
     while(!glfwWindowShouldClose(window)) {
-        //Poll for events
-        glfwPollEvents(); 
-
-        gui_update();
 
         //Rendering goes here
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        gui_render();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        //Draw the triangle
+        glUseProgram(shaderProgram);
+        glBindVertexArray(vao);
+        //draw points 0-3 from the currently bound VAO with current in-use shader
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        // glBindVertexArray(0);
 
         //Check and call events and swap the buffers
         glfwSwapBuffers(window);
-           
+        glfwPollEvents();    
     }
 
     //binvec_free(a);
     //binvec_free(b);
 
 EXIT_CLEANUP:
-    gui_terminate();
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
+    glDeleteProgram(shaderProgram);
 
     if(window) glfwDestroyWindow(window);
     glfwTerminate();
