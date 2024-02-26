@@ -40,6 +40,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
     printf("Mouse position: (%f, %f)\n", xpos, ypos);
+
+
+    
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)

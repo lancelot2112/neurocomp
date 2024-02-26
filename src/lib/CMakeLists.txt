@@ -1,5 +1,5 @@
 add_subdirectory(glfwlib)
-add_subdirectory(cimguilib)
+add_subdirectory(guilib)
 add_subdirectory(dialoglib)
 add_subdirectory(blaslib)
 
