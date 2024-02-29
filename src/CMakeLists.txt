@@ -7,6 +7,8 @@ add_compile_options($<$<COMPILE_LANG_AND_ID:C,GNU>:-Werror=implicit-function-dec
                     -Werror=uninitialized
 )
 
+add_link_options(-lrt)
+
 add_subdirectory(lib)
 add_subdirectory(resources)
 add_subdirectory(neurocomp)

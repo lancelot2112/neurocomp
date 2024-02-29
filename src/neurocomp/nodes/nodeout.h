@@ -30,6 +30,7 @@ typedef enum {
 typedef struct {
     void *node; // Unique address for the output
     uint64_t spikeTrain; // Spike train
+    uint32_t id; // unique id for the output (used for debugging)
     nodeout_type_t state; // Type of output
     uint32_t delay; // Time of next shift
     uint32_t delaySet; // Time between spikes
@@ -41,5 +42,8 @@ typedef struct {
 
 nodeout_t *nodeout_new(void *node, nodeout_type_t type, uint16_t delay, int8_t weight, uint8_t info);
 void nodeout_trigger(nodeout_t *out);
+
+void nodeoutsim_step(void);
+void nodeoutsim_init(uint32_t count);
 
 #endif

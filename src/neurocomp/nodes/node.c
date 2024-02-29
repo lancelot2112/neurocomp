@@ -26,12 +26,24 @@ uint32_t activeNodeUsed;
 
 uint32_t simTime = 0;
 
+void node_readout(int32_t* actv, int8_t* weights) {
+    for(int i = 0; i < nodeUsed; i++){
+        actv[i] = nodes[i].value;
+        for(int j = 0; j<nodes[i].outputUsed; j++){
+            weights[i*nodeUsed + ((node_t*)nodes[i].output[j]->node)->id] = nodes[i].output[j]->weightSet;
+        }
+        //weights[i] = nodes[i].threshold;
+    }
+
+}
+
 node_t *node_new(uint32_t outputCount){
     if(nodeUsed >= nodeCount) {
         nodeCount += 500;
         nodes = realloc(nodes, sizeof(node_t) * nodeCount);
     }
     node_t *node = (nodes + nodeUsed++);
+    node->id = nodeUsed - 1;
     node->outputCount = outputCount;
     node->output = malloc(sizeof(nodeout_t*) * outputCount);
     node->value = 0;
@@ -98,16 +110,16 @@ void nodesim_init(uint32_t count){
     nodeCount = count;
     nodeUsed = 0;
     nodes = malloc(sizeof(node_t) * nodeCount);
-    activeNodeCount = nodeCount>>4;
+    activeNodeCount = nodeCount>>1;
     activeNodeUsed = 0;
-    activeNodes = malloc(sizeof(node_t*) * nodeCount/2);
+    activeNodes = malloc(sizeof(node_t*) * activeNodeCount);
     simTime = 0;
 
 }
 
 void nodesim_step(void) {
-    int l_activeNodeCount = activeNodeCount;
-    activeNodeCount = 0;
+    int l_activeNodeCount = activeNodeUsed;
+    activeNodeUsed = 0;
     for(int i = 0; i < l_activeNodeCount; i++){
         node_update(activeNodes[i]);
     }

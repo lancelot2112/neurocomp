@@ -30,6 +30,7 @@ nodeout_t *nodeout_new(void *node, nodeout_type_t type, uint16_t delay, int8_t w
         nodeOuts = realloc(nodeOuts, sizeof(nodeout_t) * nodeOutCount);
     }
     nodeout_t *out = (nodeOuts + nodeOutUsed++);
+    out->id = nodeOutUsed - 1;
     out->node = node;
     out->state = type | ((info & 0xF )<<8);
     out->delay = 0;
@@ -75,6 +76,7 @@ static inline void nodeout_update(nodeout_t *out){
     } else {
         if(out->spikeTrain & (1<<out->spikeBit)) {
             out->spikeTrain &= ~(1<<out->spikeBit);
+            out->weight = out->weightSet;
             nodeout_spike(out);
         }
         if(out->spikeTrain > 0) {
@@ -92,13 +94,13 @@ void nodeoutsim_init(uint32_t initCount) {
     nodeOutUsed = 0;
     nodeOuts = malloc(sizeof(nodeout_t) * nodeOutCount);
 
-    activeNodeOutCount = 0;
+    activeNodeOutCount = 500;
     activeNodeOutUsed = 0;
-    activeNodeOut = malloc(sizeof(nodeout_t*) * 500);
+    activeNodeOut = malloc(sizeof(nodeout_t*) * activeNodeOutCount);
 }
 void nodeoutsim_step(void) {
-    int l_activeNodeOutCount = activeNodeOutCount;
-    activeNodeOutCount = 0;
+    int l_activeNodeOutCount = activeNodeOutUsed;
+    activeNodeOutUsed = 0;
     for(int i = 0; i < l_activeNodeOutCount; i++){
         nodeout_update(activeNodeOut[i]);
     }
