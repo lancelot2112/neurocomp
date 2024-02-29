@@ -4,6 +4,9 @@
     "workbench.iconTheme": "vs-seti",
     "files.associations": {
         "*.c": "c",
-        "*.h": "c"
+        "*.h": "c",
+        "bitset": "cpp",
+        "chrono": "cpp",
+        "algorithm": "cpp"
     }
 }

@@ -6,6 +6,8 @@ extern "C" {
     void gui_terminate(void);
     void gui_render(void);
     void gui_update(void);
+    void gui_begin(const char *name);
+    void gui_end(void);
 }
 
 #include "imgui.h"
@@ -77,4 +79,12 @@ void gui_update(void) {
    ImGui::ShowDemoWindow(NULL);
 
    ImPlot::ShowDemoWindow(NULL);
+}
+
+void gui_begin(const char *name) {
+    ImGui::Begin(name);
+}
+
+void gui_end(void) {
+    ImGui::End();
 }

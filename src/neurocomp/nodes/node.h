@@ -26,12 +26,8 @@ typedef enum {
 } node_state_t;
 
 typedef struct {
-    uint8_t temperature;
-} nodetmptr_t;
-
-typedef struct {
     nodeout_t **output; // Nodes this node outputs to
-    nodetmptr_t *temperature; // Nodes sharing an area in the graph will have the same temperature
+    uint32_t id;
     uint32_t outputCount; // Number of outputs
     uint32_t outputUsed; // Number of outputs used
     int32_t value;  // Current value of the node
@@ -44,6 +40,9 @@ typedef struct {
 node_t *node_new(uint32_t outputCount);
 void node_connect(node_t *source, nodeout_t *out);
 void node_trigger(nodeout_t *input);
+void node_readout(int32_t* actv, int8_t* weights);
 
+void nodesim_step(void);
+void nodesim_init(uint32_t count);
 
 #endif
