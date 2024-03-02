@@ -13,37 +13,37 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License. 
  ********************************************************************/
-#ifndef NODEOUT_H
-#define NODEOUT_H
+#ifndef connect_H
+#define connect_H
 
 #include <stdint.h>
 
 typedef enum {
-    NODEOUT_TYPE_AXON, // aNaAP (Axonal Sodium Action Potential)
-    NODEOUT_TYPE_DENDTRUNK, // dCaAP (Dendritic Calcium Action Potential)
-    NODEOUT_TYPE_DENDRITE, // NMDA? (Dendritic Sodium Action Potential)
-    NODEOUT_TYPE = 0x00FF,
-    NODEOUT_INFO = 0x0F00,
-    NODEOUT_STATE_TRIGGERED = 0x8000
-} nodeout_type_t;
+    connect_TYPE_AXON, // aNaAP (Axonal Sodium Action Potential)
+    connect_TYPE_DENDTRUNK, // dCaAP (Dendritic Calcium Action Potential)
+    connect_TYPE_DENDRITE, // NMDA? (Dendritic Sodium Action Potential)
+    connect_TYPE = 0x00FF,
+    connect_INFO = 0x0F00,
+    connect_STATE_TRIGGERED = 0x8000
+} connect_type_t;
 
-typedef struct {
-    void *node; // Unique address for the output
+typedef struct {; 
     uint64_t spikeTrain; // Spike train
+    uint32_t connect; //idx of the node to trigger
     uint32_t id; // unique id for the output (used for debugging)
-    nodeout_type_t state; // Type of output
+    connect_type_t state; // Type of output
     uint32_t delay; // Time of next shift
     uint32_t delaySet; // Time between spikes
     int8_t weight; // Strength of the output impulse
     int8_t weightSet; // Initial strength of the output impulse
     uint8_t weightDecay; // Amount the weight decays per
     uint8_t spikeBit; // When bit active spike is sent
-} nodeout_t;
+} connect_t;
 
-nodeout_t *nodeout_new(void *node, nodeout_type_t type, uint16_t delay, int8_t weight, uint8_t info);
-void nodeout_trigger(nodeout_t *out);
+connect_t *connect_new(uint32_t connect, connect_type_t type, uint16_t delay, int8_t weight, uint8_t info);
+void connect_trigger(connect_t *out);
 
-void nodeoutsim_step(void);
-void nodeoutsim_init(uint32_t count);
+void connectsim_step(void);
+void connectsim_init(uint32_t count);
 
 #endif

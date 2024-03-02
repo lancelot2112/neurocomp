@@ -23,7 +23,7 @@ typedef enum {
 typedef struct {
     node_t *predictive;
     node_t *coincident;
-    nodeout_t *fire;
+    connect_t *fire;
     node_t *output;
     nodepred_state_t state;
 } node_predictive_t;
@@ -38,13 +38,13 @@ node_predictive_t *nodepred_new(void) {
         predNodes = realloc(predNodes, sizeof(node_predictive_t) * predNodeCount);
     }
     node_predictive_t *pred = (predNodes + predNodeUsed++);
-    pred->predictive = node_new(1);
-    pred->coincident = node_new(1);
-    nodeout_t *outPred = nodeout_new(pred, NODEOUT_TYPE_DENDTRUNK, 1, 1, 0);
+    pred->predictive = node_new(1, 16);
+    pred->coincident = node_new(1, 16);
+    connect_t *outPred = connect_new(0, connect_TYPE_DENDTRUNK, 1, 1, 0);
     node_connect(pred->predictive, outPred);
 
-    pred->output = node_new(20);
-    pred->fire  = nodeout_new(pred->output, NODEOUT_TYPE_AXON, 0, pred->output->threshold+1, 0);
+    pred->output = node_new(20, 16);
+    pred->fire  = connect_new(0, connect_TYPE_AXON, 0, 50, 0);
     return pred;
 }
 
@@ -54,12 +54,12 @@ void nodepredsim_init(uint32_t initial_count) {
     predNodeUsed = 0;
 }
 
-void nodepred_trigger(nodeout_t *input) {
-    node_predictive_t *pred = (node_predictive_t*)input->node;
-    if((input->state & NODEOUT_INFO)>>8) {
+void nodepred_trigger(connect_t *input) {
+    //node_predictive_t *pred = (node_predictive_t*)input->node;
+    if((input->state & connect_INFO)>>8) {
         //COINCIDENT
         if(pred->state & NODEPRED_STATE_PREDICTED) {
-           node_trigger(pred->fire);
+           //node_trigger(pred->fire);
         }
     } else {
         //PREDICTIVE

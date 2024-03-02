@@ -17,7 +17,7 @@
 #define NODE_H
 
 #include <stdint.h>
-#include "nodeout.h"
+#include "connect.h"
 
 typedef enum {
     NODE_STATE_INACTIVE,
@@ -26,7 +26,7 @@ typedef enum {
 } node_state_t;
 
 typedef struct {
-    nodeout_t **output; // Nodes this node outputs to
+    connect_t **output; // Nodes this node outputs to
     uint32_t id;
     uint32_t outputCount; // Number of outputs
     uint32_t outputUsed; // Number of outputs used
@@ -37,10 +37,11 @@ typedef struct {
     uint8_t state;
 } node_t;
 
-node_t *node_new(uint32_t outputCount);
-void node_connect(node_t *source, nodeout_t *out);
-void node_trigger(nodeout_t *input);
-void node_readout(int32_t* actv, int8_t* weights);
+node_t *node_new(uint32_t outputCount, uint16_t threshold);
+uint16_t node_get(uint32_t index, node_t **out);
+void node_connect(node_t *source, connect_t *out);
+void node_trigger(uint32_t index, int8_t weight);
+void node_summary(int32_t* actv, int8_t *weights);
 
 void nodesim_step(void);
 void nodesim_init(uint32_t count);

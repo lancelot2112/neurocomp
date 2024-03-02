@@ -1,4 +1,4 @@
-add_executable(BinaryAI main.c)
+add_executable(BinaryAI main.cpp)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR})
 
