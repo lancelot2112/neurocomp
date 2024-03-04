@@ -38,12 +38,12 @@ node_predictive_t *nodepred_new(void) {
         predNodes = realloc(predNodes, sizeof(node_predictive_t) * predNodeCount);
     }
     node_predictive_t *pred = (predNodes + predNodeUsed++);
-    pred->predictive = node_new(1, 16);
-    pred->coincident = node_new(1, 16);
+    pred->predictive = SpikeSim_NewNode(1, 16);
+    pred->coincident = SpikeSim_NewNode(1, 16);
     connect_t *outPred = connect_new(0, connect_TYPE_DENDTRUNK, 1, 1, 0);
-    node_connect(pred->predictive, outPred);
+    SpikeSim_CreateConnection(pred->predictive, outPred);
 
-    pred->output = node_new(20, 16);
+    pred->output = SpikeSim_NewNode(20, 16);
     pred->fire  = connect_new(0, connect_TYPE_AXON, 0, 50, 0);
     return pred;
 }
@@ -59,7 +59,7 @@ void nodepred_trigger(connect_t *input) {
     if((input->state & connect_INFO)>>8) {
         //COINCIDENT
         if(pred->state & NODEPRED_STATE_PREDICTED) {
-           //node_trigger(pred->fire);
+           //SpikeSim_TriggerNode(pred->fire);
         }
     } else {
         //PREDICTIVE

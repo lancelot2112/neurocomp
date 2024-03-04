@@ -17,33 +17,40 @@
 #define NODE_H
 
 #include <stdint.h>
-#include "connect.h"
 
+// aNaAP (Axonal Sodium Action Potential)
+// dCaAP (Dendritic Calcium Action Potential)
+// NMDA? (Dendritic Sodium Action Potential)
+/*
 typedef enum {
-    NODE_STATE_INACTIVE,
-    NODE_STATE_TOWARDZERO,
-    NODE_STATE_FIRING = 0x8000
-} node_state_t;
+    connect_TYPE_AXON, 
+    connect_TYPE_DENDTRUNK, 
+    connect_TYPE_DENDRITE, 
+    connect_TYPE = 0x00FF,
+    connect_INFO = 0x0F00,
+    connect_STATE_TRIGGERED = 0x8000
+} connect_type_t;
+*/
+
+typedef struct {; 
+    uint32_t target; //Target node of this connection
+    uint8_t delay; // Time of next shift
+    int8_t weight; // Strength of the output impulse
+} connect_t;
 
 typedef struct {
-    connect_t **output; // Nodes this node outputs to
-    uint32_t id;
-    uint32_t outputCount; // Number of outputs
-    uint32_t outputUsed; // Number of outputs used
-    int32_t value;  // Current value of the node
-    uint32_t spikeTime; // Time this node last fired
-    uint16_t threshold;
-    uint16_t spikeDelta; // Amount to decrease value when firing
-    uint8_t state;
+    connect_t *outputs; // Nodes this node outputs to
+    uint16_t outputCount; // Number of outputs
+    uint16_t outputUsed; // Number of outputs used
 } node_t;
 
-node_t *node_new(uint32_t outputCount, uint16_t threshold);
-uint16_t node_get(uint32_t index, node_t **out);
-void node_connect(node_t *source, connect_t *out);
-void node_trigger(uint32_t index, int8_t weight);
-void node_summary(int32_t* actv, int8_t *weights);
+node_t *SpikeSim_NewNode(uint32_t outputCount);
+uint16_t SpikeSim_GetNode(uint32_t index, node_t **out);
+void SpikeSim_CreateConnection(node_t *source, uint32_t target, int8_t weight, uint8_t delay);
+void SpikeSim_TriggerNode(uint32_t index, int16_t weight);
+int16_t *SpikeSim_GetSummary(void);
 
-void nodesim_step(void);
-void nodesim_init(uint32_t count);
+void SpikeSim_Simulate(void);
+void SpikeSim_Init(uint32_t count);
 
 #endif

@@ -3,6 +3,7 @@ add_library(usegui STATIC)
 target_sources(usegui
 PRIVATE
     usegui.cpp
+    timer.cpp
     imgui/imgui.cpp
     imgui/imgui_demo.cpp
     imgui/imgui_draw.cpp
@@ -15,6 +16,7 @@ PRIVATE
     implot/implot_demo.cpp
 PUBLIC
     usegui.h
+    timer.hpp
 )
 
 target_include_directories(usegui

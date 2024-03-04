@@ -5,6 +5,7 @@
 #include <useglfw.h>
 #include <imgui.h>
 #include <implot.h>
+#include <timer.hpp>
 
 extern void gui_init(GLFWwindow* win, const char* glsl_version);
 extern void gui_terminate(void);

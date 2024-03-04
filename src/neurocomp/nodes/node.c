@@ -17,25 +17,38 @@
 #include "node.h"
 
 node_t *nodePool;
+int16_t *nodeValues;
 uint32_t nodeCount = 0;
 uint32_t nodeUsed = 0;
 
-node_t **activeNodes;
+uint32_t *activeNodes;
 uint32_t activeNodeCount;
 uint32_t activeNodeUsed;
 
-uint32_t simTime = 0;
+uint8_t simTime = 0;
 
-void node_summary(int32_t* actv, int8_t *weights) {
-    for(int i = 0; i < nodeUsed; i++){
-        actv[i] = nodePool[i].value;
-        for(int j = 0; j < nodePool[i].outputUsed; j++){
-            weights[i*nodeUsed + j] = nodePool[i].output[j]->weightSet;
-        }
+connect_t **activeConnect[256];
+uint32_t activeConnectCount[256];
+uint32_t activeConnectUsed[256];
+
+#define NODE_LIMIT (120)
+#define NODE_FIRE_THRESHOLD (40)
+
+static inline void queueConnection(connect_t *out){
+    //calculate the index to fire this output on
+    uint8_t fireTime = simTime + out->delay;
+    if(activeConnectUsed >= activeConnectCount) {
+        activeConnectCount[fireTime] += 20;
+        activeConnect[fireTime] = realloc(activeConnect[fireTime], sizeof(connect_t*) * activeConnectCount[fireTime]);
     }
+    activeConnect[fireTime][activeConnectUsed[fireTime]++] = out;
 }
 
-uint16_t node_get(uint32_t index, node_t **out) {
+int16_t *SpikeSim_GetSummary(void) {
+    return nodeValues;
+}
+
+uint16_t SpikeSim_GetNode(uint32_t index, node_t **out) {
     if(out == NULL || index>= nodeUsed) {
         return 0;
     }
@@ -43,91 +56,143 @@ uint16_t node_get(uint32_t index, node_t **out) {
     return 1;
 }
 
-node_t *node_new(uint32_t outputCount, uint16_t threshold){
+node_t *SpikeSim_NewNode(uint32_t outputCount){
     if(nodeUsed >= nodeCount) {
         nodeCount += 500;
         nodePool = realloc(nodePool, sizeof(node_t) * nodeCount);
+        nodeValues = realloc(nodeValues, sizeof(int16_t) * nodeCount);
     }
-    node_t *node = (nodePool + nodeUsed++);
-    node->id = nodeUsed - 1;
+    uint32_t nodeIdx = nodeUsed++;
+    node_t *node = (nodePool + nodeIdx);
     node->outputCount = outputCount;
-    node->output = malloc(sizeof(connect_t*) * outputCount);
-    node->value = 0;
-    node->state = NODE_STATE_INACTIVE;
-    node->threshold = threshold;
+    node->outputs = (connect_t*)malloc(sizeof(connect_t*) * outputCount);
     node->outputUsed = 0;
-    node->spikeDelta = node->threshold;
-    node->spikeTime = -5;
+    nodeValues[nodeIdx] = 0;
     return node;
 }
 
-void node_connect(node_t *source, connect_t *out) {
-    if(source->outputUsed >= source->outputCount) {
-        source->outputCount += 10;
-        source->output = realloc(source->output, sizeof(connect_t*) * source->outputCount);
+void SpikeSim_CreateConnection(node_t *source, uint32_t target, int8_t weight, uint8_t delay) {
+    connect_t *l_conn;
+    if(source->outputUsed == 0xFFFF) {
+        return;
     }
-    source->output[source->outputUsed++] = out;
+    if(source->outputUsed >= source->outputCount) {
+        if(0xFFFF - source->outputCount > 10) {
+            source->outputCount += 10;
+        } else {
+            source->outputCount = 0xFFFF;
+        }
+        source->outputs = realloc(source->outputs, sizeof(connect_t) * source->outputCount);
+    }
+    l_conn = &source->outputs[source->outputUsed++];
+    l_conn->target = target;
+    l_conn->delay = delay;
+    l_conn->weight = weight;
 }
 
-static inline void node_queue(node_t *node){
+static inline void queueNode(uint32_t nodeIdx){
     if(activeNodeUsed >= activeNodeCount) {
         activeNodeCount += 500;
-        activeNodes = realloc(activeNodes, sizeof(node_t*) * activeNodeCount);
+        activeNodes = realloc(activeNodes, sizeof(uint32_t) * activeNodeCount);
     }
-    activeNodes[activeNodeUsed++] = node;
+    activeNodes[activeNodeUsed++] = nodeIdx;
 }
 
-void node_trigger(uint32_t index, int8_t weight){
-    node_t *node = (node_t *)(nodePool + index);
-    node->value += weight;
+void SpikeSim_TriggerNode(uint32_t index, int16_t weight){
+    int16_t l_value = nodeValues[index];
 
-    //Check if already in simulation queue
-    if(node->state == NODE_STATE_INACTIVE){
-        node->state = NODE_STATE_TOWARDZERO;
-        node_queue(node);
+    //Check if we need to place in the simulation queue
+    if(l_value == 0 || l_value + weight > 0) {
+        queueNode(index);
     }
 
-    //Fire if above threshold and begin output propogation
-    if(node->value > node->threshold && simTime != node->spikeTime) {         
-        node->value -= node->spikeDelta;
-        node->spikeTime = simTime;
-        for(int j = 0; j < node->outputUsed; j++){
-            connect_trigger(node->output[j]);
-        }
+    //Update the value
+    l_value += weight;
+    if(l_value> NODE_LIMIT) {
+        l_value = NODE_LIMIT;
+    } else if(l_value < -NODE_LIMIT>>1) {
+        l_value = -NODE_LIMIT>>1;
     }
+    nodeValues[index] = l_value;
 }
 
-static inline void node_update(node_t *node){
+void triggerConnection(connect_t *input) {
+    SpikeSim_TriggerNode(input->target, input->weight);
+    node_t *node = (node_t *)(nodePool + input->target);
+    //node->input
+    
+
+}
+
+static inline void updateNode(uint32_t nodeIdx){
     //int32_t mask = node->value >> 31;
     //int32_t delta = (node->value >> 3) & (~((node->value > 5) || (node->value < -5))+1);
     //delta = (delta == 0) | delta;
     //node->value -= delta & (~(node->value > 0) + 1);
     //node->value += delta & (~(node->value < 0) + 1); 
-    if(node->value > 5 || node->value < -5) {
-        node->value >>= 1; //Quadratic decay
-        node_queue(node);
+
+    //Fire if above threshold and begin output propogation
+    int16_t l_value = nodeValues[nodeIdx];
+    if(l_value > NODE_FIRE_THRESHOLD) {       
+        node_t *node = (node_t *)(nodePool + nodeIdx);
+        l_value -= (NODE_FIRE_THRESHOLD << 1);
+        if(l_value < -NODE_LIMIT>>1) {
+            l_value = -NODE_LIMIT>>1;
+        }
+        queueNode(nodeIdx);
+        for(int jj = 0; jj < node->outputUsed; jj++){
+            queueConnection(node->outputs+jj);
+        }
     } else {
-        node->value = 0;
-        node->state = NODE_STATE_INACTIVE;
+        //Decay if above threshold
+        if(l_value > 3) {
+            l_value >>= 1; //Quadratic decay
+            queueNode(nodeIdx);
+        } else if(l_value > 0) {
+            l_value = 0;
+        } 
+    }
+    nodeValues[nodeIdx] = l_value;
+}
+
+static void initConnections(uint32_t initCount) {
+    for(int ii = 0; ii < 256; ii++ ) {
+        activeConnectCount[ii] = 50;
+        activeConnectUsed[ii] = 0;
+        activeConnect[ii] = malloc(sizeof(connect_t*) * activeConnectCount[ii]);
     }
 }
 
-void nodesim_init(uint32_t count){
+void SpikeSim_Init(uint32_t count){
     nodeCount = count;
     nodeUsed = 0;
     nodePool = malloc(sizeof(node_t) * nodeCount);
     activeNodeCount = nodeCount>>1;
     activeNodeUsed = 0;
     activeNodes = malloc(sizeof(node_t*) * activeNodeCount);
+    nodeValues = malloc(sizeof(int16_t) * nodeCount);
     simTime = 0;
 
+    initConnections(50);
 }
 
-void nodesim_step(void) {
+static void simulateConnections(void) {
+    int l_simTime = simTime;
+    int l_activeconnectCount = activeConnectUsed[l_simTime];
+    activeConnectUsed[l_simTime] = 0;
+    for(int ii = 0; ii < l_activeconnectCount; ii++){
+        connect_t *out = activeConnect[l_simTime][ii];
+        triggerConnection(out);
+    }
+}
+
+void SpikeSim_Simulate(void) {
     int l_activeNodeCount = activeNodeUsed;
     activeNodeUsed = 0;
-    for(int i = 0; i < l_activeNodeCount; i++){
-        node_update(activeNodes[i]);
+    for(int ii = 0; ii < l_activeNodeCount; ii++){
+        //TODO: Scramble indices to prevent bias
+        updateNode(activeNodes[ii]);
     }
+    simulateConnections();
     simTime++;
 }
