@@ -27,22 +27,8 @@ uint32_t activeNodeUsed;
 
 uint8_t simTime = 0;
 
-connect_t **activeConnect[256];
-uint32_t activeConnectCount[256];
-uint32_t activeConnectUsed[256];
-
 #define NODE_LIMIT (120)
 #define NODE_FIRE_THRESHOLD (40)
-
-static inline void queueConnection(connect_t *out){
-    //calculate the index to fire this output on
-    uint8_t fireTime = simTime + out->delay;
-    if(activeConnectUsed >= activeConnectCount) {
-        activeConnectCount[fireTime] += 20;
-        activeConnect[fireTime] = realloc(activeConnect[fireTime], sizeof(connect_t*) * activeConnectCount[fireTime]);
-    }
-    activeConnect[fireTime][activeConnectUsed[fireTime]++] = out;
-}
 
 int16_t *SpikeSim_GetSummary(void) {
     return nodeValues;
@@ -67,11 +53,14 @@ node_t *SpikeSim_NewNode(uint32_t outputCount){
     node->outputCount = outputCount;
     node->outputs = (connect_t*)malloc(sizeof(connect_t*) * outputCount);
     node->outputUsed = 0;
+    node->inputCount = 0;
+    node->inputs = NULL;
+    node->inputUsed = 0;
     nodeValues[nodeIdx] = 0;
     return node;
 }
 
-void SpikeSim_CreateConnection(node_t *source, uint32_t target, int8_t weight, uint8_t delay) {
+void SpikeSim_CreateConnection(node_t *source, uint32_t target, int8_t weight, uint8_t div, uint8_t time) {
     connect_t *l_conn;
     if(source->outputUsed == 0xFFFF) {
         return;
@@ -86,8 +75,9 @@ void SpikeSim_CreateConnection(node_t *source, uint32_t target, int8_t weight, u
     }
     l_conn = &source->outputs[source->outputUsed++];
     l_conn->target = target;
-    l_conn->delay = delay;
     l_conn->weight = weight;
+    l_conn->div = div;
+    l_conn->time = time;
 }
 
 static inline void queueNode(uint32_t nodeIdx){
@@ -98,29 +88,72 @@ static inline void queueNode(uint32_t nodeIdx){
     activeNodes[activeNodeUsed++] = nodeIdx;
 }
 
-void SpikeSim_TriggerNode(uint32_t index, int16_t weight){
-    int16_t l_value = nodeValues[index];
+static inline void stimNode(connect_t *input) {
+    int16_t l_value = nodeValues[input->target];
+    node_t *node = (node_t *)(nodePool + input->target);
 
-    //Check if we need to place in the simulation queue
-    if(l_value == 0 || l_value + weight > 0) {
-        queueNode(index);
-    }
+    if(input->weight <= 0) {
+        l_value += input->weight;
 
-    //Update the value
-    l_value += weight;
-    if(l_value> NODE_LIMIT) {
-        l_value = NODE_LIMIT;
-    } else if(l_value < -NODE_LIMIT>>1) {
-        l_value = -NODE_LIMIT>>1;
-    }
-    nodeValues[index] = l_value;
+        if(l_value> NODE_LIMIT) {
+            l_value = NODE_LIMIT;
+        } else if(l_value < -NODE_LIMIT>>1) {
+            l_value = -NODE_LIMIT>>1;
+        }
+        nodeValues[input->target] = l_value;
+    } else if(node->inputUsed < 0xFE) {
+        if(node->inputCount == 0) {
+            node->inputCount = 4;
+            node->inputs = malloc(sizeof(event_t) * node->inputCount);
+        }else if(node->inputUsed >= node->inputCount) {
+            if(0xFF - node->inputCount > 10) {
+                node->inputCount += 10;
+            } else {
+                node->inputCount = 0xFF;
+            }
+            node->inputs = realloc(node->inputs, sizeof(event_t) * node->inputCount);
+        }
+        node->inputs[node->inputUsed].source = input;
+        node->inputs[node->inputUsed].value = 0;
+        node->inputs[node->inputUsed].time = 0;
+        node->inputUsed++;
+
+        //Check if we need to place in the simulation queue
+        if(node->inputUsed == 1) {
+            queueNode(input->target);
+        }
+    }     
 }
 
-void triggerConnection(connect_t *input) {
-    SpikeSim_TriggerNode(input->target, input->weight);
-    node_t *node = (node_t *)(nodePool + input->target);
-    //node->input
-    
+
+void SpikeSim_StimNode(uint32_t nodeIdx, int16_t value) {
+    nodeValues[nodeIdx] += value;
+    if(nodeValues[nodeIdx] > NODE_LIMIT) {
+        nodeValues[nodeIdx] = NODE_LIMIT;
+    } else if(nodeValues[nodeIdx] < -NODE_LIMIT>>1) {
+        nodeValues[nodeIdx] = -NODE_LIMIT>>1;
+    }
+    queueNode(nodeIdx);
+}
+float spksim_invalue;
+float spksim_outvalue;
+float SpikeSim_GetFloat(void) {
+    return spksim_outvalue;
+}
+
+void SpikeSim_SetFloat(float value) {
+    spksim_invalue = value;
+}
+
+void SpikeSim_SetImage(uint8_t *image, uint32_t width, uint32_t height) {
+
+}
+
+void SpikeSim_SetAudio(uint8_t *audio, uint32_t length) {
+
+}
+
+void SpikeSim_SetText(char *text) {
 
 }
 
@@ -139,28 +172,41 @@ static inline void updateNode(uint32_t nodeIdx){
         if(l_value < -NODE_LIMIT>>1) {
             l_value = -NODE_LIMIT>>1;
         }
-        queueNode(nodeIdx);
-        for(int jj = 0; jj < node->outputUsed; jj++){
-            queueConnection(node->outputs+jj);
+        //TODO: Adapt the inputs to the node
+        node->inputUsed = 0;
+        for(int ii = 0; ii < node->outputUsed; ii++) {
+            stimNode(node->outputs + ii);
         }
     } else {
         //Decay if above threshold
-        if(l_value > 3) {
-            l_value >>= 1; //Quadratic decay
-            queueNode(nodeIdx);
-        } else if(l_value > 0) {
+        node_t *node = nodePool + nodeIdx;
+        if(node->inputUsed > 0) {
             l_value = 0;
-        } 
+            uint16_t l_inputUsed = node->inputUsed;
+            node->inputUsed = 0;
+            for(int ii = 0; ii < l_inputUsed; ii++) {
+                event_t *input = node->inputs + ii;
+                if(input->time <= input->source->time) {
+                    uint16_t dlt = (input->source->weight - input->value)>>input->source->div;
+                    input->value += dlt + (dlt == 0);
+                    input->time++;
+                } else {
+                    input->value >>= 1;
+                }
+                if(input->value > 0) {
+                    l_value += input->value;
+                    node->inputs[node->inputUsed++] = *input;
+                }
+            }
+            queueNode(nodeIdx);
+        } else if (l_value > 5) {
+            l_value >>= 1;
+            queueNode(nodeIdx);
+        } else {
+            l_value = 0;
+        }
     }
     nodeValues[nodeIdx] = l_value;
-}
-
-static void initConnections(uint32_t initCount) {
-    for(int ii = 0; ii < 256; ii++ ) {
-        activeConnectCount[ii] = 50;
-        activeConnectUsed[ii] = 0;
-        activeConnect[ii] = malloc(sizeof(connect_t*) * activeConnectCount[ii]);
-    }
 }
 
 void SpikeSim_Init(uint32_t count){
@@ -172,18 +218,6 @@ void SpikeSim_Init(uint32_t count){
     activeNodes = malloc(sizeof(node_t*) * activeNodeCount);
     nodeValues = malloc(sizeof(int16_t) * nodeCount);
     simTime = 0;
-
-    initConnections(50);
-}
-
-static void simulateConnections(void) {
-    int l_simTime = simTime;
-    int l_activeconnectCount = activeConnectUsed[l_simTime];
-    activeConnectUsed[l_simTime] = 0;
-    for(int ii = 0; ii < l_activeconnectCount; ii++){
-        connect_t *out = activeConnect[l_simTime][ii];
-        triggerConnection(out);
-    }
 }
 
 void SpikeSim_Simulate(void) {
@@ -193,6 +227,5 @@ void SpikeSim_Simulate(void) {
         //TODO: Scramble indices to prevent bias
         updateNode(activeNodes[ii]);
     }
-    simulateConnections();
     simTime++;
 }

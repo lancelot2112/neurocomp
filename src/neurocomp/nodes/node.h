@@ -32,22 +32,35 @@ typedef enum {
 } connect_type_t;
 */
 
-typedef struct {; 
+typedef struct { 
     uint32_t target; //Target node of this connection
-    uint8_t delay; // Time of next shift
     int8_t weight; // Strength of the output impulse
+    uint8_t div; // divisor for the rise time (power of 2)
+    uint8_t time; // time to stay active
 } connect_t;
+
+//The event evolves over time
+//The peak value contribution is given by the weight of the connection
+//The time the event peaks is given by the  
+typedef struct {
+    connect_t *source; // Source of the event
+    int8_t value; //current value of the event
+    uint8_t time; // time this event has been active
+} event_t;
 
 typedef struct {
     connect_t *outputs; // Nodes this node outputs to
+    event_t *inputs; // Current active events for this node
+    uint16_t inputCount; // Size of input list
     uint16_t outputCount; // Number of outputs
+    uint16_t inputUsed; // Number of inputs used
     uint16_t outputUsed; // Number of outputs used
 } node_t;
 
 node_t *SpikeSim_NewNode(uint32_t outputCount);
 uint16_t SpikeSim_GetNode(uint32_t index, node_t **out);
-void SpikeSim_CreateConnection(node_t *source, uint32_t target, int8_t weight, uint8_t delay);
-void SpikeSim_TriggerNode(uint32_t index, int16_t weight);
+void SpikeSim_CreateConnection(node_t *source, uint32_t target, int8_t weight, uint8_t div, uint8_t time);
+void SpikeSim_StimNode(uint32_t index, int16_t weight);
 int16_t *SpikeSim_GetSummary(void);
 
 void SpikeSim_Simulate(void);

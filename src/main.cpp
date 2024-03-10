@@ -168,11 +168,13 @@ int main(int argc, char *argv[])
             uint32_t targetIdx = (nodeIdx + targetX + targetY * sqrtNodeCnt)%NODE_COUNT;
 
             int8_t weight = rand()%20;
+            uint8_t div = rand()%10;
+            uint8_t time = rand()%30;
             connect_t *conn;
             if(rand() % 100 < percentInhibitory) {
                 weight = -weight;
             }
-            SpikeSim_CreateConnection(node, targetIdx, weight, 0);
+            SpikeSim_CreateConnection(node, targetIdx, weight, div, time);
         }
     }
 
@@ -232,7 +234,7 @@ int main(int argc, char *argv[])
             if(simTicks % desSpikeRateInTicks == 0) {
                 for(int count = 0; count < 3; count++) {
                     int16_t weight = 50;
-                    SpikeSim_TriggerNode(count, weight);
+                    SpikeSim_StimNode(count, weight);
                 }
             }
             //connectsim_step();

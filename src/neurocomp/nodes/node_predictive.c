@@ -59,7 +59,7 @@ void nodepred_trigger(connect_t *input) {
     if((input->state & connect_INFO)>>8) {
         //COINCIDENT
         if(pred->state & NODEPRED_STATE_PREDICTED) {
-           //SpikeSim_TriggerNode(pred->fire);
+           //SpikeSim_StimNode(pred->fire);
         }
     } else {
         //PREDICTIVE
