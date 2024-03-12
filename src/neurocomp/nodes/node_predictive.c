@@ -25,7 +25,7 @@ typedef struct {
     node_t *coincident;
     connect_t *fire;
     node_t *output;
-    nodepred_state_t state;
+    nodepred_state_t time;
 } node_predictive_t;
 
 node_predictive_t *predNodes;
@@ -56,17 +56,17 @@ void nodepredsim_init(uint32_t initial_count) {
 
 void nodepred_trigger(connect_t *input) {
     //node_predictive_t *pred = (node_predictive_t*)input->node;
-    if((input->state & connect_INFO)>>8) {
+    if((input->time & connect_INFO)>>8) {
         //COINCIDENT
-        if(pred->state & NODEPRED_STATE_PREDICTED) {
+        if(pred->time & NODEPRED_STATE_PREDICTED) {
            //SpikeSim_StimNode(pred->fire);
         }
     } else {
         //PREDICTIVE
         if(input->delay > 0) {
-            pred->state |= NODEPRED_STATE_PREDICTED;
+            pred->time |= NODEPRED_STATE_PREDICTED;
         } else {
-            pred->state &= ~NODEPRED_STATE_PREDICTED;
+            pred->time &= ~NODEPRED_STATE_PREDICTED;
         }    
     }
 }

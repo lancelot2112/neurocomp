@@ -32,7 +32,8 @@ typedef enum {
 } connect_type_t;
 */
 
-typedef struct { 
+typedef struct {
+    uint32_t source; // Source node of this connection
     uint32_t target; //Target node of this connection
     int8_t weight; // Strength of the output impulse
     uint8_t div; // divisor for the rise time (power of 2)
@@ -55,13 +56,15 @@ typedef struct {
     uint16_t outputCount; // Number of outputs
     uint16_t inputUsed; // Number of inputs used
     uint16_t outputUsed; // Number of outputs used
+    uint8_t time; // Sim step the node was added to queue
+    int8_t value; // Current value of the node
 } node_t;
 
 node_t *SpikeSim_NewNode(uint32_t outputCount);
 uint16_t SpikeSim_GetNode(uint32_t index, node_t **out);
-void SpikeSim_CreateConnection(node_t *source, uint32_t target, int8_t weight, uint8_t div, uint8_t time);
+void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, int8_t weight, uint8_t div, uint8_t time);
 void SpikeSim_StimNode(uint32_t index, int16_t weight);
-int16_t *SpikeSim_GetSummary(void);
+int16_t *SpikeSim_GetSummary(uint32_t *actvNodes);
 
 void SpikeSim_Simulate(void);
 void SpikeSim_Init(uint32_t count);

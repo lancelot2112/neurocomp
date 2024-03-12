@@ -5,6 +5,10 @@
 #include <stdint.h>
 #include <time.h>
 
+extern "C" {
+    #include <node.h>
+}
+
 void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights, uint32_t count);
 //namespace NeuroPlot {
 
@@ -13,7 +17,7 @@ inline T RandomRange(T min, T max) {
     T scale = rand() / (T) RAND_MAX;
     return min + scale * ( max - min );
 }
-
+uint32_t clickedIdx;
 void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights,uint32_t count) {
     static int scale_min       = -80;
     static int scale_max       = 80;
@@ -38,9 +42,9 @@ void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights,uint32_t count) {
     static ImPlotAxisFlags axes_flags = ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoTickMarks;
 
     ImPlot::PushColormap(map);
-
+    ImPlotPoint mousePos;
+    int sqrtCnt = sqrt(count);
     if(ImPlot::BeginPlot("##Heatmap1",ImVec2(500,500),ImPlotFlags_NoLegend)) {
-        int sqrtCnt = sqrt(count);
         const char *labels = "%d";
         if(count > sqrtCnt * sqrtCnt) {
             sqrtCnt + 1;
@@ -52,7 +56,12 @@ void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights,uint32_t count) {
         if(lims.X.Max - lims.X.Min > 20 || lims.Y.Max - lims.Y.Min > 20) {
             labels = nullptr;
         }
-        ImPlot::PlotHeatmap("heat1",nodeActv,sqrtCnt,sqrtCnt,scale_min,scale_max,labels,ImPlotPoint(0,0),ImPlotPoint(sqrtCnt,sqrtCnt),hm_flags);
+        if(ImPlot::IsPlotHovered()) {
+            mousePos = ImPlot::GetPlotMousePos();
+        } else {
+            mousePos = ImPlotPoint(-1,-1);
+        }
+        ImPlot::PlotHeatmap("heat1",nodeActv,sqrtCnt,sqrtCnt,scale_min,scale_max,labels,ImPlotPoint(0,sqrtCnt),ImPlotPoint(sqrtCnt,0),hm_flags);
         ImPlot::EndPlot();
     }
 
@@ -60,6 +69,23 @@ void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights,uint32_t count) {
     ImPlot::ColormapScale("##HeatScale",scale_min, scale_max, ImVec2(60,225));
 
     ImPlot::PopColormap();
+
+    if(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && mousePos.x >= 0 && mousePos.y >=0) {
+        clickedIdx = ((int)mousePos.y * sqrtCnt + (int)mousePos.x);
+    }
+    if(clickedIdx < count) {
+        node_t *node;
+        ImGui::Text("Node %d === \n -v: %d\n",clickedIdx,nodeActv[clickedIdx]);
+        if(SpikeSim_GetNode(clickedIdx, &node)) {
+            ImGui::Text("Active Inputs: %d -State: %d\n", node->inputUsed, node->time);
+            for(int ii = 0; ii < node->inputUsed; ii++) {
+                connect_t *source = node->inputs[ii].source;
+                event_t *event = node->inputs + ii;
+                ImGui::Text("[%d] -t:%d/%d -v:%d/%d",source->source,event->time, source->time, event->value, source->weight);
+            }
+
+        }
+    }
 }
 
 //}

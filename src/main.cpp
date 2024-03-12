@@ -140,9 +140,9 @@ int main(int argc, char *argv[])
     SpikeSim_CreateConnection(node3, out31);
     SpikeSim_CreateConnection(node4, out41);*/
 
-#define NODE_COUNT 10000
-    int percentInhibitory = 60;
-    int percentConnected = 5;
+#define NODE_COUNT 50000
+    int percentInhibitory = 40;
+    int percentConnected = 2;
     uint32_t connNodes = NODE_COUNT * percentConnected / 100;
 
     SpikeSim_Init(NODE_COUNT);
@@ -160,21 +160,20 @@ int main(int argc, char *argv[])
 
     uint32_t sqrtNodeCnt = sqrt(NODE_COUNT);
     uint32_t sqrtConnCnt = sqrt(connNodes);
+    int8_t inhibitory;
     for(int nodeIdx = 0; nodeIdx < NODE_COUNT; nodeIdx++) {
         node_t *node = nodes + nodeIdx;
+        inhibitory = rand() % 100 < percentInhibitory ? -1 : 1;
         for(int outCnt = 0; outCnt < connNodes; outCnt++) {
             uint32_t targetX = outCnt % sqrtConnCnt;
             uint32_t targetY = outCnt / sqrtConnCnt;
             uint32_t targetIdx = (nodeIdx + targetX + targetY * sqrtNodeCnt)%NODE_COUNT;
 
-            int8_t weight = rand()%20;
+            int8_t weight = (rand()%20)*inhibitory;
             uint8_t div = rand()%10;
             uint8_t time = rand()%30;
             connect_t *conn;
-            if(rand() % 100 < percentInhibitory) {
-                weight = -weight;
-            }
-            SpikeSim_CreateConnection(node, targetIdx, weight, div, time);
+            SpikeSim_CreateConnection(nodeIdx, targetIdx, weight, div, time);
         }
     }
 
@@ -184,7 +183,7 @@ int main(int argc, char *argv[])
     //memset(connWeights, 0, NODE_COUNT * NODE_COUNT * sizeof(int8_t));
     int ii = 0;
     int jj = 0;
-    float simRate = 1/60.0f; //Hz
+    float simRate = 30.0f; //Hz ... 1/60.0f; minimum
     float spikeRate = 20.0f;  //Hz
     int desSimRateInTicks = 1; //number of rndr ticks between simulation ticks
     int desSpikeRateInTicks = 1; //number of rndr ticks between spike ticks
@@ -243,7 +242,9 @@ int main(int argc, char *argv[])
         }
 
         timer.start();
-        Update_SpikeMap(SpikeSim_GetSummary(), nullptr, NODE_COUNT);
+        uint32_t actvNodes;
+        Update_SpikeMap(SpikeSim_GetSummary(&actvNodes), nullptr, NODE_COUNT);
+        ImGui::Text("Active Nodes: %d", actvNodes);
         gui_end();
 
         if(show_implot_demo) {
