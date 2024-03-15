@@ -1,23 +1,23 @@
 /****************************************************************/ /**
-                                                                    * Copyright 2023 Lance C Faivor
-                                                                    *
-                                                                    * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                    *  you may not use this file except in compliance with the License.
-                                                                    *  You may obtain a copy of the License at
-                                                                    *
-                                                                    *    http://www.apache.org/licenses/LICENSE-2.0
-                                                                    *
-                                                                    *  Unless required by applicable law or agreed to in writing, software
-                                                                    *  distributed under the License is distributed on an "AS IS" BASIS,
-                                                                    *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                    *  See the License for the specific language governing permissions and
-                                                                    *  limitations under the License.
-                                                                    ********************************************************************/
+* Copyright 2023 Lance C Faivor
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************/
 #include <stdlib.h>
 #include "node.h"
 
 node_t *nodePool;
-int16_t *nodeValues;
+int16_t *nodeTotStimLvl;
 uint32_t nodeCount = 0;
 uint32_t nodeUsed = 0;
 
@@ -37,7 +37,7 @@ uint8_t simTime = 0;
 int16_t *SpikeSim_GetSummary(uint32_t *actvNodes)
 {
     *actvNodes = activeNodeUsed;
-    return nodeValues;
+    return nodeTotStimLvl;
 }
 
 uint16_t SpikeSim_GetNode(uint32_t index, node_t **out)
@@ -56,24 +56,25 @@ node_t *SpikeSim_NewNode(uint32_t outputCount)
     {
         nodeCount += 500;
         nodePool = realloc(nodePool, sizeof(node_t) * nodeCount);
-        nodeValues = realloc(nodeValues, sizeof(int16_t) * nodeCount);
+        nodeTotStimLvl = realloc(nodeTotStimLvl, sizeof(int16_t) * nodeCount);
     }
     uint32_t nodeIdx = nodeUsed++;
     node_t *node = (nodePool + nodeIdx);
     node->outputCount = outputCount;
-    node->outputs = (connect_t *)malloc(sizeof(connect_t) * outputCount);
+    node->outputs = (connection_t *)malloc(sizeof(connection_t) * outputCount);
     node->outputUsed = 0;
     node->inputCount = 0;
     node->inputs = NULL;
     node->inputUsed = 0;
+    node->value = 0;
     node->time = (uint8_t)(simTime - 1);
-    nodeValues[nodeIdx] = 0;
+    nodeTotStimLvl[nodeIdx] = 0;
     return node;
 }
 
 void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, int8_t weight, uint8_t div, uint8_t time)
 {
-    connect_t *l_conn;
+    connection_t *l_conn;
     node_t *source = (node_t *)(nodePool + sourceIdx);
     if (source->outputUsed == 0xFFFF)
     {
@@ -89,14 +90,18 @@ void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, int8_t we
         {
             source->outputCount = 0xFFFF;
         }
-        source->outputs = realloc(source->outputs, sizeof(connect_t) * source->outputCount);
+        source->outputs = realloc(source->outputs, sizeof(connection_t) * source->outputCount);
     }
     l_conn = &source->outputs[source->outputUsed++];
     l_conn->source = sourceIdx;
     l_conn->target = targetIdx;
     l_conn->weight = weight;
+    l_conn->value = 0;
+    div &= 0xF;
     l_conn->div = div;
-    l_conn->time = time;
+    time &= 0xFE;
+    l_conn->timeSet = time;
+    l_conn->time = time+1;
 }
 
 static inline void queueStimNode(uint32_t nodeIdx) 
@@ -115,16 +120,19 @@ static inline void queueStimNode(uint32_t nodeIdx)
     stimNodes[stimNodeUsed++] = nodeIdx;
 }
 
-static inline void stimNode(connect_t *input)
+static inline void stimNode(connection_t *input)
 {
     node_t *node = (node_t *)(nodePool + input->target);
+    if(input->time <= input->timeSet || input->value != 0) {
+        return;
+    }
 
     if (node->inputUsed < 0xFE)
     {
         if (node->inputCount == 0)
         {
             node->inputCount = 4;
-            node->inputs = malloc(sizeof(event_t) * node->inputCount);
+            node->inputs = malloc(sizeof(connection_t *) * node->inputCount);
         }
         else if (node->inputUsed >= node->inputCount)
         {
@@ -136,11 +144,11 @@ static inline void stimNode(connect_t *input)
             {
                 node->inputCount = 0xFF;
             }
-            node->inputs = realloc(node->inputs, sizeof(event_t) * node->inputCount);
+            node->inputs = realloc(node->inputs, sizeof(connection_t*) * node->inputCount);
         }
-        node->inputs[node->inputUsed].source = input;
-        node->inputs[node->inputUsed].value = 0;
-        node->inputs[node->inputUsed].time = 0;
+        node->inputs[node->inputUsed] = input;
+        node->inputs[node->inputUsed]->value = 0;
+        node->inputs[node->inputUsed]->time = 0;
         node->inputUsed++;
     }
     // Check if we need to place in the simulation queue
@@ -194,7 +202,7 @@ static inline void updateNode(uint32_t nodeIdx)
     // node->value += delta & (~(node->value < 0) + 1);
 
     // Fire if above threshold and begin output propogation
-    int64_t l_value = nodeValues[nodeIdx];
+    int64_t l_value = nodeTotStimLvl[nodeIdx];
     node_t *node = (node_t *)(nodePool + nodeIdx);
     if (l_value > NODE_FIRE_THRESHOLD)
     {
@@ -204,7 +212,13 @@ static inline void updateNode(uint32_t nodeIdx)
         // }
         l_value = 0;
         node->value = 0;
-        // TODO: Adapt the inputs to the node
+        for(int ii = 0; ii < node->inputUsed; ii++){
+            // TODO: Adapt the inputs to the node
+            connection_t *input = node->inputs[ii];
+            input->time = input->timeSet+1;
+            input->value = 0;
+        }
+        
         node->inputUsed = 0;
         for (int ii = 0; ii < node->outputUsed; ii++)
         {
@@ -221,29 +235,29 @@ static inline void updateNode(uint32_t nodeIdx)
             node->inputUsed = 0;
             for (int ii = 0; ii < l_inputUsed; ii++)
             {
-                event_t *input = node->inputs + ii;
-                if (input->time <= input->source->time)
+                connection_t *input = node->inputs[ii];
+                if (input->time <= input->timeSet)
                 {
-                    int16_t dlt = (input->source->weight - input->value) >> input->source->div;
+                    int16_t dlt = (input->weight - input->value) >> input->div;
                     input->value += dlt;
                     input->time++;
 
                     l_value += input->value;
-                    node->inputs[node->inputUsed++] = *input;
+                    node->inputs[node->inputUsed++] = input;
                 }
-                else if (input->time == input->source->time)
+                else if (input->time == input->timeSet)
                 {
-                    input->value = input->source->weight;
+                    input->value = input->weight;
                     input->time++;
 
                     l_value += input->value;
-                    node->inputs[node->inputUsed++] = *input;
+                    node->inputs[node->inputUsed++] = input;
                 }
                 else if (input->value > 2 || input->value < -2)
                 {
                     input->value >>= 1;
                     l_value += input->value;
-                    node->inputs[node->inputUsed++] = *input;
+                    node->inputs[node->inputUsed++] = input;
                 }
                 else
                 {
@@ -270,7 +284,7 @@ static inline void updateNode(uint32_t nodeIdx)
             l_value = 0;
         }
     }
-    nodeValues[nodeIdx] = l_value;
+    nodeTotStimLvl[nodeIdx] = l_value;
 }
 
 void SpikeSim_Init(uint32_t count)
@@ -284,7 +298,7 @@ void SpikeSim_Init(uint32_t count)
     stimNodeUsed = 0;
     activeNodes = malloc(sizeof(node_t *) * activeNodeCount);
     stimNodes = malloc(sizeof(node_t *) * stimNodeCount);
-    nodeValues = malloc(sizeof(int16_t) * nodeCount);
+    nodeTotStimLvl = malloc(sizeof(int16_t) * nodeCount);
     simTime = 0;
 }
 
@@ -302,7 +316,10 @@ static uint32_t activateStimNodes(void) {
 }
 void SpikeSim_Simulate(void)
 {
-    int l_activeNodes = activateStimNodes();
+    int l_activeNodes;
+    int l_randStim;
+
+    l_activeNodes = activateStimNodes();
     simTime++;
     for (int ii = 0; ii < l_activeNodes; ii++)
     {

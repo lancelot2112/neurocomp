@@ -32,26 +32,23 @@ typedef enum {
 } connect_type_t;
 */
 
-typedef struct {
-    uint32_t source; // Source node of this connection
-    uint32_t target; //Target node of this connection
-    int8_t weight; // Strength of the output impulse
-    uint8_t div; // divisor for the rise time (power of 2)
-    uint8_t time; // time to stay active
-} connect_t;
-
 //The event evolves over time
 //The peak value contribution is given by the weight of the connection
 //The time the event peaks is given by the  
 typedef struct {
-    connect_t *source; // Source of the event
-    int8_t value; //current value of the event
-    uint8_t time; // time this event has been active
-} event_t;
+    uint32_t source; // Source node of this connection
+    uint32_t target; //Target node of this connection
+    int8_t weight; // Strength of the output impulse
+    int8_t value;
+    uint8_t timeSet; // time to stay active
+    uint8_t time;
+    uint8_t div:4;// divisor for the rise time (power of 2)
+    uint8_t reserved:4; 
+} connection_t;
 
 typedef struct {
-    connect_t *outputs; // Nodes this node outputs to
-    event_t *inputs; // Current active events for this node
+    connection_t *outputs; // Nodes this node outputs to
+    connection_t **inputs; // Current active events for this node
     uint16_t inputCount; // Size of input list
     uint16_t outputCount; // Number of outputs
     uint16_t inputUsed; // Number of inputs used

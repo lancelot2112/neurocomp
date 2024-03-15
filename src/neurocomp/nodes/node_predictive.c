@@ -23,7 +23,7 @@ typedef enum {
 typedef struct {
     node_t *predictive;
     node_t *coincident;
-    connect_t *fire;
+    connection_t *fire;
     node_t *output;
     nodepred_state_t time;
 } node_predictive_t;
@@ -40,7 +40,7 @@ node_predictive_t *nodepred_new(void) {
     node_predictive_t *pred = (predNodes + predNodeUsed++);
     pred->predictive = SpikeSim_NewNode(1, 16);
     pred->coincident = SpikeSim_NewNode(1, 16);
-    connect_t *outPred = connect_new(0, connect_TYPE_DENDTRUNK, 1, 1, 0);
+    connection_t *outPred = connect_new(0, connect_TYPE_DENDTRUNK, 1, 1, 0);
     SpikeSim_CreateConnection(pred->predictive, outPred);
 
     pred->output = SpikeSim_NewNode(20, 16);
@@ -54,7 +54,7 @@ void nodepredsim_init(uint32_t initial_count) {
     predNodeUsed = 0;
 }
 
-void nodepred_trigger(connect_t *input) {
+void nodepred_trigger(connection_t *input) {
     //node_predictive_t *pred = (node_predictive_t*)input->node;
     if((input->time & connect_INFO)>>8) {
         //COINCIDENT

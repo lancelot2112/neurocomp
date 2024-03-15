@@ -19,8 +19,8 @@ inline T RandomRange(T min, T max) {
 }
 uint32_t clickedIdx;
 void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights,uint32_t count) {
-    static int scale_min       = -80;
-    static int scale_max       = 80;
+    static int scale_min       = -40;
+    static int scale_max       = 40;
 
     static ImPlotColormap map = ImPlotColormap_Jet;
     if (ImPlot::ColormapButton(ImPlot::GetColormapName(map),ImVec2(225,0),map)) {
@@ -73,19 +73,24 @@ void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights,uint32_t count) {
     if(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && mousePos.x >= 0 && mousePos.y >=0) {
         clickedIdx = ((int)mousePos.y * sqrtCnt + (int)mousePos.x);
     }
+    gui_begin("Node Properties");
     if(clickedIdx < count) {
         node_t *node;
         ImGui::Text("Node %d === \n -v: %d\n",clickedIdx,nodeActv[clickedIdx]);
         if(SpikeSim_GetNode(clickedIdx, &node)) {
-            ImGui::Text("Active Inputs: %d -State: %d\n", node->inputUsed, node->time);
-            for(int ii = 0; ii < node->inputUsed; ii++) {
-                connect_t *source = node->inputs[ii].source;
-                event_t *event = node->inputs + ii;
-                ImGui::Text("[%d] -t:%d/%d -v:%d/%d",source->source,event->time, source->time, event->value, source->weight);
+            ImGui::Text("Outputs: %d -SimTimeActv:%d", node->outputUsed, node->time);
+            for(int ii = 0; ii < node->outputUsed; ii++) {
+                connection_t *target = node->outputs + ii;
+                ImGui::Text("[%d] -t:%d/%d -v:%d/%d -d:%d",target->target,target->time, target->timeSet, target->value, target->weight, target->div);
             }
-
+            ImGui::Text("Active Inputs: %d\n", node->inputUsed);
+            for(int ii = 0; ii < node->inputUsed; ii++) {
+                connection_t *source = node->inputs[ii];
+                ImGui::Text("[%d] -t:%d/%d -v:%d/%d -d:%d",source->source,source->time, source->timeSet, source->value, source->weight, source->div);
+            }
         }
     }
+    gui_end();
 }
 
 //}
