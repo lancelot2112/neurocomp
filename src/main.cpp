@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
     SpikeSim_CreateConnection(node4, out41);*/
 
 #define NODE_COUNT 7500
-    int percentInhibitory = 0;
+    int percentInhibitory = 65;
     int percentConnected = 1;
     uint32_t connNodes = NODE_COUNT * percentConnected / 100;
 
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
             uint32_t targetIdx = (nodeIdx + targetX + targetY * sqrtNodeCnt)%NODE_COUNT;
 
             int8_t weight = (rand() & 0x1f)*inhibitory;
-            uint8_t div = rand() & 0xF;
+            uint8_t div = rand() & 0x7;
             uint8_t time;
             if(inhibitory > 0) { 
                 time = rand() & 0x3f;

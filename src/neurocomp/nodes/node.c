@@ -123,8 +123,12 @@ static inline void queueStimNode(uint32_t nodeIdx)
 static inline void stimNode(connection_t *input)
 {
     node_t *node = (node_t *)(nodePool + input->target);
-    if(input->time <= input->timeSet || input->value != 0) {
+    if(input->time <= input->timeSet) {
         return;
+    }
+
+    if(input->value != 0) {
+        input->time = 0;
     }
 
     if (node->inputUsed < 0xFE)
@@ -215,11 +219,11 @@ static inline void updateNode(uint32_t nodeIdx)
         for(int ii = 0; ii < node->inputUsed; ii++){
             // TODO: Adapt the inputs to the node
             connection_t *input = node->inputs[ii];
-            input->time = input->timeSet+1;
+            //input->time = input->timeSet+1;
             input->value = 0;
         }
         
-        node->inputUsed = 0;
+        //node->inputUsed = 0;
         for (int ii = 0; ii < node->outputUsed; ii++)
         {
             stimNode(node->outputs + ii);

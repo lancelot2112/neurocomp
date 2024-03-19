@@ -38,8 +38,8 @@ typedef enum {
 typedef struct {
     uint32_t source; // Source node of this connection
     uint32_t target; //Target node of this connection
-    int8_t weight; // Strength of the output impulse
-    int8_t value;
+    int8_t weight; // Strength of the output impulse (current flow)
+    int8_t value; // Voltage potential across connection
     uint8_t timeSet; // time to stay active
     uint8_t time;
     uint8_t div:4;// divisor for the rise time (power of 2)
