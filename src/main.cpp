@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     #endif
 
     //Create a window
-    GLFWwindow* window = glfwCreateWindow(1280, 760, "NeuroComp", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1920, 1280, "NeuroComp", NULL, NULL);
     if (!window) {
         // Window or OpenGL context creation failed
         main_cleanup(window);
@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
 
     const char* glsl_header = "#version 430 core";
     gui_init(window, glsl_header);
+    gui_rescale(16.0f, 2.0f);
 
     //Set up callbacks
     //glfwSetKeyCallback(window, key_callback);
