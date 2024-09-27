@@ -220,6 +220,12 @@ static inline void updateNode(uint32_t nodeIdx)
             // TODO: Adapt the inputs to the node
             connection_t *input = node->inputs[ii];
             //input->time = input->timeSet+1;
+            //Grow the weight
+            if(input->weight > 0 && input->weight < 60) {
+                input->weight++;
+            } else if (input->weight < 0 && input->weight > -60) {
+                input->weight--;
+            }
             input->value = 0;
         }
         
@@ -266,6 +272,12 @@ static inline void updateNode(uint32_t nodeIdx)
                 else
                 {
                     input->value = 0;
+                    //Decay the weight
+                    if(input->weight > 1) {
+                        input->weight--;
+                    } else if (input->weight < -1){
+                        input->weight++;
+                    }
                 }
             }
             if (l_value > NODE_LIMIT)
