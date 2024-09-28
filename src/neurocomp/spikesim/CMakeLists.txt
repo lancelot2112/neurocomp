@@ -1,12 +1,11 @@
 target_sources(neurocomp
 PRIVATE
-    node.c
-    connect.c
-    #node_predictive.c
-    neuroplot.cpp
+    spikenode.c
+    spikeasm.c
+    spikeplot.cpp
 PUBLIC
-    node.h
-    connect.h
+    spikenode.h
+    spikeasm.h
 )
 
 target_include_directories(neurocomp  

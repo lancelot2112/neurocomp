@@ -6,7 +6,7 @@
 #include <time.h>
 
 extern "C" {
-    #include <node.h>
+    #include <spikenode.h>
 }
 
 void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights, uint32_t count);

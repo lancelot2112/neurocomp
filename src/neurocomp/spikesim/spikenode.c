@@ -14,7 +14,7 @@
 *  limitations under the License.
 ********************************************************************/
 #include <stdlib.h>
-#include "node.h"
+#include "spikenode.h"
 
 node_t *nodePool;
 int16_t *nodeTotStimLvl;

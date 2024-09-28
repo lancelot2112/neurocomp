@@ -13,8 +13,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License. 
  ********************************************************************/
-#include <stdlib.h>
-#include "node.h"
+#ifndef connect_H
+#define connect_H
 
+#include <stdint.h>
+#include <spikenode.h>
 
+uint16_t SpikeAsm_Build(uint32_t nodeCount, uint8_t percentConnected, uint8_t percentInhibitory);
 
+#endif
