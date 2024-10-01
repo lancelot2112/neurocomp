@@ -277,11 +277,10 @@ static inline void updateNode(uint32_t nodeIdx)
             connection_t *activation = node->excitations[ii];
             //activation->timeActv = activation->timeSet+1;
             //Grow the weight
+            int16_t l_dT = activation->timeActv;
             if(activation->weight > 0 && activation->weight < 60) {
                 activation->weight++;
-            } else if (activation->weight < 0 && activation->weight > -60) {
-                activation->weight--;
-            }
+            } 
             activation->stimLevel = 0;
         }
         
