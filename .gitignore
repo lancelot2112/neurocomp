@@ -12,3 +12,4 @@
 
 # CMake Build files
 /build/*
+/src/resources/shaders/shadercode.h
