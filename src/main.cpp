@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     //glfwSetScrollCallback(window, scroll_callback);
     //glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     #define NODE_COUNT 7500
-    if(!SpikeAsm_Build(NODE_COUNT, 20, 20)) {
+    if(!SpikeAsm_Build(NODE_COUNT, 1, 25)) {
         printf("Failed to build spike assembly\n");
         main_cleanup(window);
         return -4;
@@ -129,6 +129,7 @@ int main(int argc, char *argv[])
 
     float simRate = 1/60.0f; //Hz ... 1/60.0f; minimum
     float spikeRate = 20.0f;  //Hz
+    int spikeCnt = 20;
     int desSimRateInTicks = 1; //number of rndr ticks between simulation ticks
     int desSpikeRateInTicks = 1; //number of rndr ticks between spike ticks
     int rndrTicks = 0; //increments by 1 every loop 1/60 seconds 
@@ -164,6 +165,7 @@ int main(int argc, char *argv[])
         //Simulation sliders
         ImGui::DragFloat("Sim Freq", &simRate, 0.5f, 1/60.0f, 60.0f, "%.3f Hz", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat("Spike Freq", &spikeRate, 0.5f, 1/60.0f,  60.0f, "%.3f Hz", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragInt("Spike Count", &spikeCnt, 1, 1, 200, "%d", ImGuiSliderFlags_AlwaysClamp);
         ImGui::Checkbox("Pause Sim", &pause_sim);
         ImGui::SameLine();
         ImGui::Checkbox("Pause Pattern", &pause_pattern);
@@ -182,7 +184,7 @@ int main(int argc, char *argv[])
 
             desSpikeRateInTicks = (int)(60.0f/spikeRate);
             if(simTicks % desSpikeRateInTicks == 0) {
-                for(int count = 0; count < 20; count++) {
+                for(int count = 0; count < spikeCnt; count++) {
                     if(!pause_pattern) {
                         pattern[count] = rand() %200;
                     }

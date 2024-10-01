@@ -71,6 +71,7 @@ node_t *SpikeSim_NewNode(uint32_t outputCount)
     node->inhibitionUsed = 0;
     node->stimLevel = 0;
     node->simTimeActv = (uint8_t)(simTime - 1);
+    node->timeSinceFire = 16;
     nodeTotStimLvl[nodeIdx] = 0;
     return node;
 }
@@ -135,7 +136,22 @@ static inline void stimNode(connection_t *conn)
         conn->timeActv = 0;
     }
 
+    uint8_t l_dW = 0;
+    if(node->timeSinceFire < 8) {
+        node->timeSinceFire++;
+        l_dW = 16 >> (node->timeSinceFire>>1);
+    }
+
     if( conn->type == 0 ) {
+        if(l_dW > 0) {
+            if(conn->weight - l_dW > 0) {
+                conn->weight -= l_dW;
+            } else {
+                conn->weight = 0;
+                //TODO: Prune connection?
+            }
+        }
+
         if (node->excitationUsed < 0xFE)
         {
             if (node->excitationCount == 0)
@@ -158,9 +174,17 @@ static inline void stimNode(connection_t *conn)
             node->excitations[node->excitationUsed] = conn;
             node->excitations[node->excitationUsed]->stimLevel = 0;
             node->excitations[node->excitationUsed]->timeActv = 0;
+
             node->excitationUsed++;
         }
     } else {
+        if(l_dW > 0) {
+            if(conn->weight + l_dW < 60) {
+                conn->weight += l_dW;
+            } else {
+                conn->weight = 60;
+            }
+        }
         if (node->inhibitionUsed < 0xFE)
         {
             if (node->inhibitionCount == 0)
@@ -198,9 +222,9 @@ void SpikeSim_StimNode(uint32_t nodeIdx, int16_t stimLevel)
     {
         node->stimLevel = NODE_LIMIT;
     }
-    else if (node->stimLevel < -NODE_LIMIT >> 1)
+    else if (node->stimLevel < -NODE_LIMIT)
     {
-        node->stimLevel = -NODE_LIMIT >> 1;
+        node->stimLevel = -NODE_LIMIT;
     }
     queueStimNode(nodeIdx);
 }
@@ -238,15 +262,20 @@ static inline uint8_t updateConnection(connection_t *conn)
     uint16_t delta = 0;
     if (conn->timeActv < conn->timeSet)
     {
-        delta = (conn->weight - conn->stimLevel) >> conn->div;
+        delta = (conn->weight + 1 - conn->stimLevel) >> 1;
         conn->stimLevel += delta;
     }
-    else if (conn->stimLevel > 2)
+    else if (conn->timeActv == conn->timeSet)
+    {
+        conn->stimLevel = conn->weight;
+    }
+    else if (conn->stimLevel > 1)
     {
         conn->stimLevel >>= 1;
     }
-    else if((conn->timeActv - conn->timeSet) < 18)
+    else 
     {
+        conn->stimLevel = 0;
     }
     conn->timeActv++;
 
@@ -262,8 +291,9 @@ static inline void updateNode(uint32_t nodeIdx)
     // node->stimLevel += delta & (~(node->stimLevel < 0) + 1);
 
     // Fire if above threshold and begin output propogation
-    int64_t l_stimLvl = nodeTotStimLvl[nodeIdx];
+
     node_t *node = (node_t *)(nodePool + nodeIdx);
+    int64_t l_stimLvl = nodeTotStimLvl[nodeIdx];
     if (l_stimLvl > NODE_FIRE_THRESHOLD)
     {
         // l_value -= (NODE_FIRE_THRESHOLD << 1);
@@ -272,26 +302,46 @@ static inline void updateNode(uint32_t nodeIdx)
         // }
         l_stimLvl = 0;
         node->stimLevel = 0;
+        node->timeSinceFire = 0;
+
+        // Excitatory and Inhibitory connections that contributed to this firing
+        // are now adapted as such.
+        // Apply learning rules for excitatory
         for(int ii = 0; ii < node->excitationUsed; ii++){
-            // TODO: Adapt the excitations to the node
-            connection_t *activation = node->excitations[ii];
-            //activation->timeActv = activation->timeSet+1;
-            //Grow the weight
-            int16_t l_dT = activation->timeActv;
-            if(activation->weight > 0 && activation->weight < 60) {
-                activation->weight++;
-            } 
-            activation->stimLevel = 0;
+            connection_t *excitation = node->excitations[ii];
+            int16_t l_dT = excitation->timeActv;
+            uint8_t l_dW = 16 >> (l_dT>>2);
+            if(excitation->weight + l_dW < 60) {
+                excitation->weight += l_dW;
+            } else {
+                excitation->weight = 60;
+            }
+            excitation->stimLevel = 0;
+        }        
+        node->excitationUsed = 0;
+
+        // Apply learning rules for inhibitory
+        for(int ii = 0; ii < node->inhibitionUsed; ii++) {
+            connection_t *inhibition = node->inhibitions[ii];
+            int16_t l_dT = inhibition->timeActv;
+            uint8_t l_dW = 16 >> (l_dT>>1);
+            if(inhibition->weight + l_dW < 60) {
+                inhibition->weight += l_dW;
+            } else {
+                inhibition->weight = 60;
+            }
+            inhibition->stimLevel = 0;
         }
-        
-        //node->excitationUsed = 0;
+        node->inhibitionUsed = 0;
         for (int ii = 0; ii < node->outputUsed; ii++)
         {
             stimNode(node->outputs + ii);
         }
-    }
-    else
-    {
+    } else {
+        l_stimLvl = node->stimLevel;
+        node->stimLevel >>= 1;
+        uint64_t l_exciteIn = 0;
+        uint64_t l_inhibitIn = 0;
         if (node->excitationUsed + node->inhibitionUsed > 0)
         {
             uint16_t l_excitationUsed = node->excitationUsed;
@@ -299,21 +349,28 @@ static inline void updateNode(uint32_t nodeIdx)
             for (int ii = 0; ii < l_excitationUsed; ii++)
             {
                 connection_t *excitation = node->excitations[ii];
-                l_stimLvl += updateConnection(excitation);
-                node->excitations[node->excitationUsed++] = excitation;
+                l_exciteIn += updateConnection(excitation);
+                if(excitation->timeActv - excitation->timeSet < 16) {
+                    node->excitations[node->excitationUsed++] = excitation;
+                }
             }
             uint16_t l_inhibitionUsed = node->inhibitionUsed;
             node->inhibitionUsed = 0;
             for(int ii = 0; ii < l_inhibitionUsed; ii++) {
                 connection_t *inhibition = node->inhibitions[ii];
-                l_stimLvl -= updateConnection(inhibition);
-                node->inhibitions[node->inhibitionUsed++] = inhibition;
+                l_inhibitIn += updateConnection(inhibition);
+                if(inhibition->timeActv - inhibition->timeSet < 16) {
+                    node->inhibitions[node->inhibitionUsed++] = inhibition;
+                }
             }
+
+            l_stimLvl += l_exciteIn;
+            l_stimLvl -= l_inhibitIn;
 
             if (l_stimLvl > NODE_LIMIT) {
                 l_stimLvl = NODE_LIMIT;
-            } else if (l_stimLvl < -NODE_LIMIT >> 1) {
-                l_stimLvl = -NODE_LIMIT >> 1;
+            } else if (l_stimLvl < -NODE_LIMIT) {
+                l_stimLvl = -NODE_LIMIT;
             } else {
                 l_stimLvl = l_stimLvl;
             }

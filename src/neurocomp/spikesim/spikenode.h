@@ -58,6 +58,7 @@ typedef struct {
     uint16_t inhibitionCount; // Size of inhibition list
     uint16_t inhibitionUsed; // Number of inhibitions used
     uint8_t simTimeActv; // Sim step the node was added to queue
+    uint8_t timeSinceFire; // Sim step the node was fired
     int8_t stimLevel; // Current value of the node
 } node_t;
 

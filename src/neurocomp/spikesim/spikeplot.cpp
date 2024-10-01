@@ -81,14 +81,18 @@ void Update_SpikeMap(int16_t *nodeActv, int8_t *connWeights,uint32_t count) {
             ImGui::Text("Outputs: %d -SimTimeActv:%d", node->outputUsed, node->simTimeActv);
             for(int ii = 0; ii < node->outputUsed; ii++) {
                 connection_t *target = node->outputs + ii;
-                ImGui::Text("[%d] -t:%d/%d -v:%d/%d -d:%d",target->target,target->timeActv, target->timeSet, target->stimLevel, target->weight, target->div);
+                if(target->type) {
+                    ImGui::Text("Inh: [%d] -t:%d/%d -v:%d/%d -d:%d",target->target,target->timeActv, target->timeSet, target->stimLevel, target->weight, target->div);
+                } else {
+                    ImGui::Text("Exc: [%d] -t:%d/%d -v:%d/%d -d:%d",target->target,target->timeActv, target->timeSet, target->stimLevel, target->weight, target->div);
+                }
             }
-            ImGui::Text("Activations: %d\n", node->excitationUsed);
+            ImGui::Text("===Excitations: %d===\n", node->excitationUsed);
             for(int ii = 0; ii < node->excitationUsed; ii++) {
                 connection_t *source = node->excitations[ii];
                 ImGui::Text("[%d] -t:%d/%d -v:%d/%d -d:%d",source->source,source->timeActv, source->timeSet, source->stimLevel, source->weight, source->div);
             }
-            ImGui::Text("Inhibitions: %d\n", node->inhibitionUsed);
+            ImGui::Text("===Inhibitions: %d===\n", node->inhibitionUsed);
             for(int ii = 0; ii < node->inhibitionUsed; ii++) {
                 connection_t *source = node->inhibitions[ii];
                 ImGui::Text("[%d] -t:%d/%d -v:%d/%d -d:%d",source->source,source->timeActv, source->timeSet, source->stimLevel, source->weight, source->div);
