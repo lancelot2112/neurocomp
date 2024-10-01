@@ -63,16 +63,19 @@ node_t *SpikeSim_NewNode(uint32_t outputCount)
     node->outputCount = outputCount;
     node->outputs = (connection_t *)malloc(sizeof(connection_t) * outputCount);
     node->outputUsed = 0;
-    node->inputCount = 0;
-    node->inputs = NULL;
-    node->inputUsed = 0;
-    node->value = 0;
-    node->time = (uint8_t)(simTime - 1);
+    node->excitationCount = 0;
+    node->excitations = NULL;
+    node->excitationUsed = 0;
+    node->inhibitionCount = 0;
+    node->inhibitions = NULL;
+    node->inhibitionUsed = 0;
+    node->stimLevel = 0;
+    node->simTimeActv = (uint8_t)(simTime - 1);
     nodeTotStimLvl[nodeIdx] = 0;
     return node;
 }
 
-void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, int8_t weight, uint8_t div, uint8_t time)
+void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, uint8_t weight, uint8_t div, uint8_t timeActv, uint8_t type)
 {
     connection_t *l_conn;
     node_t *source = (node_t *)(nodePool + sourceIdx);
@@ -96,18 +99,19 @@ void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, int8_t we
     l_conn->source = sourceIdx;
     l_conn->target = targetIdx;
     l_conn->weight = weight;
-    l_conn->value = 0;
+    l_conn->type = type;
+    l_conn->stimLevel = 0;
     div &= 0xF;
     l_conn->div = div;
-    time &= 0xFE;
-    l_conn->timeSet = time;
-    l_conn->time = time+1;
+    timeActv &= 0xFE;
+    l_conn->timeSet = timeActv;
+    l_conn->timeActv = timeActv+1;
 }
 
 static inline void queueStimNode(uint32_t nodeIdx) 
 {
     node_t *node = nodePool + nodeIdx;
-    if(node->time == simTime) {
+    if(node->simTimeActv == simTime) {
         return;
     }
 
@@ -116,60 +120,87 @@ static inline void queueStimNode(uint32_t nodeIdx)
         stimNodeCount += 500;
         stimNodes = realloc(stimNodes, sizeof(uint32_t) * stimNodeCount);
     }
-    node->time = simTime;
+    node->simTimeActv = simTime;
     stimNodes[stimNodeUsed++] = nodeIdx;
 }
 
-static inline void stimNode(connection_t *input)
+static inline void stimNode(connection_t *conn)
 {
-    node_t *node = (node_t *)(nodePool + input->target);
-    if(input->time <= input->timeSet) {
+    node_t *node = (node_t *)(nodePool + conn->target);
+    if(conn->timeActv <= conn->timeSet) {
         return;
     }
 
-    if(input->value != 0) {
-        input->time = 0;
+    if(conn->stimLevel != 0) {
+        conn->timeActv = 0;
     }
 
-    if (node->inputUsed < 0xFE)
-    {
-        if (node->inputCount == 0)
+    if( conn->type == 0 ) {
+        if (node->excitationUsed < 0xFE)
         {
-            node->inputCount = 4;
-            node->inputs = malloc(sizeof(connection_t *) * node->inputCount);
+            if (node->excitationCount == 0)
+            {
+                node->excitationCount = 4;
+                node->excitations = malloc(sizeof(connection_t *) * node->excitationCount);
+            }
+            else if (node->excitationUsed >= node->excitationCount)
+            {
+                if (0xFF - node->excitationCount > 10)
+                {
+                    node->excitationCount += 10;
+                }
+                else
+                {
+                    node->excitationCount = 0xFF;
+                }
+                node->excitations = realloc(node->excitations, sizeof(connection_t*) * node->excitationCount);
+            }
+            node->excitations[node->excitationUsed] = conn;
+            node->excitations[node->excitationUsed]->stimLevel = 0;
+            node->excitations[node->excitationUsed]->timeActv = 0;
+            node->excitationUsed++;
         }
-        else if (node->inputUsed >= node->inputCount)
+    } else {
+        if (node->inhibitionUsed < 0xFE)
         {
-            if (0xFF - node->inputCount > 10)
+            if (node->inhibitionCount == 0)
             {
-                node->inputCount += 10;
+                node->inhibitionCount = 4;
+                node->inhibitions = malloc(sizeof(connection_t *) * node->inhibitionCount);
             }
-            else
+            else if (node->inhibitionUsed >= node->inhibitionCount)
             {
-                node->inputCount = 0xFF;
+                if (0xFF - node->inhibitionCount > 4)
+                {
+                    node->inhibitionCount += 4;
+                }
+                else
+                {
+                    node->inhibitionCount = 0xFF;
+                }
+                node->inhibitions = realloc(node->inhibitions, sizeof(connection_t*) * node->inhibitionCount);
             }
-            node->inputs = realloc(node->inputs, sizeof(connection_t*) * node->inputCount);
+            node->inhibitions[node->inhibitionUsed] = conn;
+            node->inhibitions[node->inhibitionUsed]->stimLevel = 0;
+            node->inhibitions[node->inhibitionUsed]->timeActv = 0;
+            node->inhibitionUsed++;
         }
-        node->inputs[node->inputUsed] = input;
-        node->inputs[node->inputUsed]->value = 0;
-        node->inputs[node->inputUsed]->time = 0;
-        node->inputUsed++;
     }
     // Check if we need to place in the simulation queue
-    queueStimNode(input->target);
+    queueStimNode(conn->target);
 }
 
-void SpikeSim_StimNode(uint32_t nodeIdx, int16_t value)
+void SpikeSim_StimNode(uint32_t nodeIdx, int16_t stimLevel)
 {
     node_t *node = (node_t *)(nodePool + nodeIdx);
-    node->value += value;
-    if (node->value > NODE_LIMIT)
+    node->stimLevel += stimLevel;
+    if (node->stimLevel > NODE_LIMIT)
     {
-        node->value = NODE_LIMIT;
+        node->stimLevel = NODE_LIMIT;
     }
-    else if (node->value < -NODE_LIMIT >> 1)
+    else if (node->stimLevel < -NODE_LIMIT >> 1)
     {
-        node->value = -NODE_LIMIT >> 1;
+        node->stimLevel = -NODE_LIMIT >> 1;
     }
     queueStimNode(nodeIdx);
 }
@@ -180,9 +211,9 @@ float SpikeSim_GetFloat(void)
     return spksim_outvalue;
 }
 
-void SpikeSim_SetFloat(float value)
+void SpikeSim_SetFloat(float stimLevel)
 {
-    spksim_invalue = value;
+    spksim_invalue = stimLevel;
 }
 
 void SpikeSim_SetImage(uint8_t *image, uint32_t width, uint32_t height)
@@ -197,39 +228,64 @@ void SpikeSim_SetText(char *text)
 {
 }
 
+void applyLearning(connection_t *conn)
+{
+
+}
+
+static inline uint8_t updateConnection(connection_t *conn)
+{
+    uint16_t delta = 0;
+    if (conn->timeActv < conn->timeSet)
+    {
+        delta = (conn->weight - conn->stimLevel) >> conn->div;
+        conn->stimLevel += delta;
+    }
+    else if (conn->stimLevel > 2)
+    {
+        conn->stimLevel >>= 1;
+    }
+    else if((conn->timeActv - conn->timeSet) < 18)
+    {
+    }
+    conn->timeActv++;
+
+    return conn->stimLevel;
+}
+
 static inline void updateNode(uint32_t nodeIdx)
 {
-    // int32_t mask = node->value >> 31;
-    // int32_t delta = (node->value >> 3) & (~((node->value > 5) || (node->value < -5))+1);
+    // int32_t mask = node->stimLevel >> 31;
+    // int32_t delta = (node->stimLevel >> 3) & (~((node->stimLevel > 5) || (node->stimLevel < -5))+1);
     // delta = (delta == 0) | delta;
-    // node->value -= delta & (~(node->value > 0) + 1);
-    // node->value += delta & (~(node->value < 0) + 1);
+    // node->stimLevel -= delta & (~(node->stimLevel > 0) + 1);
+    // node->stimLevel += delta & (~(node->stimLevel < 0) + 1);
 
     // Fire if above threshold and begin output propogation
-    int64_t l_value = nodeTotStimLvl[nodeIdx];
+    int64_t l_stimLvl = nodeTotStimLvl[nodeIdx];
     node_t *node = (node_t *)(nodePool + nodeIdx);
-    if (l_value > NODE_FIRE_THRESHOLD)
+    if (l_stimLvl > NODE_FIRE_THRESHOLD)
     {
         // l_value -= (NODE_FIRE_THRESHOLD << 1);
         // if(l_value < -NODE_LIMIT>>1) {
         //     l_value = -NODE_LIMIT>>1;
         // }
-        l_value = 0;
-        node->value = 0;
-        for(int ii = 0; ii < node->inputUsed; ii++){
-            // TODO: Adapt the inputs to the node
-            connection_t *input = node->inputs[ii];
-            //input->time = input->timeSet+1;
+        l_stimLvl = 0;
+        node->stimLevel = 0;
+        for(int ii = 0; ii < node->excitationUsed; ii++){
+            // TODO: Adapt the excitations to the node
+            connection_t *activation = node->excitations[ii];
+            //activation->timeActv = activation->timeSet+1;
             //Grow the weight
-            if(input->weight > 0 && input->weight < 60) {
-                input->weight++;
-            } else if (input->weight < 0 && input->weight > -60) {
-                input->weight--;
+            if(activation->weight > 0 && activation->weight < 60) {
+                activation->weight++;
+            } else if (activation->weight < 0 && activation->weight > -60) {
+                activation->weight--;
             }
-            input->value = 0;
+            activation->stimLevel = 0;
         }
         
-        //node->inputUsed = 0;
+        //node->excitationUsed = 0;
         for (int ii = 0; ii < node->outputUsed; ii++)
         {
             stimNode(node->outputs + ii);
@@ -237,70 +293,44 @@ static inline void updateNode(uint32_t nodeIdx)
     }
     else
     {
-        l_value = node->value;
-        node->value >>= 1;
-        if (node->inputUsed > 0)
+        if (node->excitationUsed + node->inhibitionUsed > 0)
         {
-            uint16_t l_inputUsed = node->inputUsed;
-            node->inputUsed = 0;
-            for (int ii = 0; ii < l_inputUsed; ii++)
+            uint16_t l_excitationUsed = node->excitationUsed;
+            node->excitationUsed = 0;
+            for (int ii = 0; ii < l_excitationUsed; ii++)
             {
-                connection_t *input = node->inputs[ii];
-                if (input->time <= input->timeSet)
-                {
-                    int16_t dlt = (input->weight - input->value) >> input->div;
-                    input->value += dlt;
-                    input->time++;
-
-                    l_value += input->value;
-                    node->inputs[node->inputUsed++] = input;
-                }
-                else if (input->time == input->timeSet)
-                {
-                    input->value = input->weight;
-                    input->time++;
-
-                    l_value += input->value;
-                    node->inputs[node->inputUsed++] = input;
-                }
-                else if (input->value > 2 || input->value < -2)
-                {
-                    input->value >>= 1;
-                    l_value += input->value;
-                    node->inputs[node->inputUsed++] = input;
-                }
-                else
-                {
-                    input->value = 0;
-                    //Decay the weight
-                    if(input->weight > 1) {
-                        input->weight--;
-                    } else if (input->weight < -1){
-                        input->weight++;
-                    }
-                }
+                connection_t *excitation = node->excitations[ii];
+                l_stimLvl += updateConnection(excitation);
+                node->excitations[node->excitationUsed++] = excitation;
             }
-            if (l_value > NODE_LIMIT)
-            {
-                l_value = NODE_LIMIT;
+            uint16_t l_inhibitionUsed = node->inhibitionUsed;
+            node->inhibitionUsed = 0;
+            for(int ii = 0; ii < l_inhibitionUsed; ii++) {
+                connection_t *inhibition = node->inhibitions[ii];
+                l_stimLvl -= updateConnection(inhibition);
+                node->inhibitions[node->inhibitionUsed++] = inhibition;
             }
-            else if (l_value < -NODE_LIMIT >> 1)
-            {
-                l_value = -NODE_LIMIT >> 1;
+
+            if (l_stimLvl > NODE_LIMIT) {
+                l_stimLvl = NODE_LIMIT;
+            } else if (l_stimLvl < -NODE_LIMIT >> 1) {
+                l_stimLvl = -NODE_LIMIT >> 1;
+            } else {
+                l_stimLvl = l_stimLvl;
             }
             queueStimNode(nodeIdx);
         }
-        else if (l_value > 5 || l_value < -5)
+        else if (l_stimLvl > 5 || l_stimLvl < -5)
         {
             queueStimNode(nodeIdx);
         }
         else
         {
-            node->value = 0;
-            l_value = 0;
+            node->stimLevel = 0;
+            l_stimLvl = 0;
         }
     }
-    nodeTotStimLvl[nodeIdx] = l_value;
+    nodeTotStimLvl[nodeIdx] = l_stimLvl;
 }
 
 void SpikeSim_Init(uint32_t count)

@@ -38,28 +38,32 @@ typedef enum {
 typedef struct {
     uint32_t source; // Source node of this connection
     uint32_t target; //Target node of this connection
-    int8_t weight; // Strength of the output impulse (current flow)
-    int8_t value; // Voltage potential across connection
+    uint8_t weight; // Strength of the output impulse (current flow)
+    uint8_t stimLevel; // Voltage potential across connection
     uint8_t timeSet; // time to stay active
-    uint8_t time;
+    uint8_t timeActv;
     uint8_t div:4;// divisor for the rise time (power of 2)
-    uint8_t reserved:4; 
+    uint8_t learnRule:3;
+    uint8_t type:1; //type of connection (0 = excitatory, 1 = inhibitory) 
 } connection_t;
 
 typedef struct {
     connection_t *outputs; // Nodes this node outputs to
-    connection_t **inputs; // Current active events for this node
-    uint16_t inputCount; // Size of input list
+    connection_t **excitations; // Current active events for this node
+    connection_t **inhibitions; // Current active inhibitions for this node
     uint16_t outputCount; // Number of outputs
-    uint16_t inputUsed; // Number of inputs used
     uint16_t outputUsed; // Number of outputs used
-    uint8_t time; // Sim step the node was added to queue
-    int8_t value; // Current value of the node
+    uint16_t excitationCount; // Size of activation list
+    uint16_t excitationUsed; // Number of activations used
+    uint16_t inhibitionCount; // Size of inhibition list
+    uint16_t inhibitionUsed; // Number of inhibitions used
+    uint8_t simTimeActv; // Sim step the node was added to queue
+    int8_t stimLevel; // Current value of the node
 } node_t;
 
 node_t *SpikeSim_NewNode(uint32_t outputCount);
 uint16_t SpikeSim_GetNode(uint32_t index, node_t **out);
-void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, int8_t weight, uint8_t div, uint8_t time);
+void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, uint8_t weight, uint8_t div, uint8_t time, uint8_t type);
 void SpikeSim_StimNode(uint32_t index, int16_t weight);
 int16_t *SpikeSim_GetSummary(uint32_t *actvNodes);
 

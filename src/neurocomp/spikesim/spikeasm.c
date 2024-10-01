@@ -58,14 +58,14 @@ uint16_t SpikeAsm_Build(uint32_t nodeCount, uint8_t percentConnected, uint8_t pe
         //if(nodeIdx < 200) {
         //    inhibitory = 1;
         //} else {
-            inhibitory = rand() % 100 < percentInhibitory ? -1 : 1;
+            inhibitory = rand() % 100 < percentInhibitory;
         //}
         for(int outCnt = 0; outCnt < connNodes; outCnt++) {
             uint32_t targetX = outCnt % sqrtConnCnt;
             uint32_t targetY = outCnt / sqrtConnCnt;
             uint32_t targetIdx = (nodeIdx + targetX + targetY * sqrtNodeCnt)%nodeCount;
 
-            int8_t weight = (rand() & 0x1f)*inhibitory;
+            int8_t weight = (rand() & 0x1f);
             uint8_t div = rand() & 0x7;
             uint8_t time;
             if(inhibitory > 0) { 
@@ -74,7 +74,7 @@ uint16_t SpikeAsm_Build(uint32_t nodeCount, uint8_t percentConnected, uint8_t pe
                 time = rand() & 0x1f;
             }
             connection_t *conn;
-            SpikeSim_CreateConnection(nodeIdx, targetIdx, weight, div, time);
+            SpikeSim_CreateConnection(nodeIdx, targetIdx, weight, div, time, inhibitory);
         }
     }
 
