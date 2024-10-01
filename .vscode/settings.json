@@ -70,6 +70,10 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "charconv": "c",
+        "format": "c",
+        "__bit_reference": "c",
+        "__node_handle": "c"
     }
 }
