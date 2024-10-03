@@ -51,6 +51,8 @@ typedef struct {
     connection_t *outputs; // Nodes this node outputs to
     connection_t **excitations; // Current active events for this node
     connection_t **inhibitions; // Current active inhibitions for this node
+    uint64_t excitationLvl; // Current excitation level
+    uint64_t inhibitionLvl; // Current inhibition level
     uint16_t outputCount; // Number of outputs
     uint16_t outputUsed; // Number of outputs used
     uint16_t excitationCount; // Size of activation list
@@ -59,7 +61,7 @@ typedef struct {
     uint16_t inhibitionUsed; // Number of inhibitions used
     uint8_t simTimeActv; // Sim step the node was added to queue
     uint8_t timeSinceFire; // Sim step the node was fired
-    int8_t stimLevel; // Current value of the node
+    int8_t stimLevel; // Current node bias (used for direct stimulation)
 } node_t;
 
 node_t *SpikeSim_NewNode(uint32_t outputCount);
