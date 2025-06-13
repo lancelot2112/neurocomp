@@ -37,7 +37,7 @@ SCENARIO("Bundling two mostly orthogonal vectors", "[membndl]"){
         binvec_setbit(b, 5000);
 
         binvec_setbit(a, 6000);
-        binvec_setbit(a, 6000);
+        binvec_setbit(b, 6000);
 
         //Test that the memory bundle is created correctly 
         //First check that the number of coincidental bits is within reason 

@@ -18,13 +18,14 @@
 
 /* This file is the main spiking neural network simulation. The simulation is based on
  * the following principles:
- * 1. Active nodes are added to the simulation queue
- * 2. Each node in the simulation queue is updated in turn until it returns back to the resting state
+ * 1. Stimulated nodes get pushed to the stimulated node list
+ * 2. On the next step stimulated nodes become active nodes and are added to the simulation queue
+ * 3. Each node in the simulation queue is updated in turn until it returns back to the resting state
  * at which time it is not re-added to the queue. 
- * 3. When a node reaches a threshold potential, it fires and sends an impulse to all connected nodes
- * 4a. The firing node has a weight update for the contributing spikes dW/dt = I_ij * Delta(t_pre - t_fire) - I_ij * Delta(t_post - t_fire)
+ * 4. When a node reaches a threshold potential, it fires and sends an impulse to all connected nodes
+ * 5a. The firing node has a weight update for the contributing spikes dW/dt = I_ij * Delta(t_pre - t_fire) - I_ij * Delta(t_post - t_fire)
  * Any connection that is below a threshold is pruned. 
- * 4b. The receiving node has a connection added to a simulation list and is pushed to the simulation queue
+ * 5b. The receiving node has a connection added to a simulation list and is pushed to the simulation queue
  * as an active node.
  */
 node_t *nodePool;
@@ -44,6 +45,8 @@ uint8_t simTime = 0;
 
 #define NODE_LIMIT (120)
 #define NODE_FIRE_THRESHOLD (40)
+
+uint64_t SpikeSim_BytesUsed = 0;
 
 int16_t *SpikeSim_GetSummary(uint32_t *actvNodes)
 {
@@ -65,19 +68,25 @@ node_t *SpikeSim_NewNode(uint32_t outputCount)
 {
     if (nodeUsed >= nodeCount)
     {
+        uint32_t l_prevNodeCount = nodeCount;
         nodeCount += 500;
         nodePool = realloc(nodePool, sizeof(node_t) * nodeCount);
         nodeTotStimLvl = realloc(nodeTotStimLvl, sizeof(int16_t) * nodeCount);
+        SpikeSim_BytesUsed += (sizeof(node_t) + sizeof(int16_t)) * (nodeCount - l_prevNodeCount);
+
     }
     uint32_t nodeIdx = nodeUsed++;
     node_t *node = (nodePool + nodeIdx);
     node->outputCount = outputCount;
     node->outputs = (connection_t *)malloc(sizeof(connection_t) * outputCount);
+    SpikeSim_BytesUsed += sizeof(connection_t) * outputCount;
     node->outputUsed = 0;
+    node->excitationLvl = 0;
     node->excitationCount = 0;
     node->excitations = NULL;
     node->excitationUsed = 0;
     node->inhibitionCount = 0;
+    node->inhibitionLvl = 0;
     node->inhibitions = NULL;
     node->inhibitionUsed = 0;
     node->stimLevel = 0;
@@ -100,6 +109,7 @@ void SpikeSim_CreateConnection(uint32_t sourceIdx, uint32_t targetIdx, uint8_t w
         if (0xFFFF - source->outputCount > 10)
         {
             source->outputCount += 10;
+            SpikeSim_BytesUsed += sizeof(connection_t) * 10;
         }
         else
         {
@@ -130,6 +140,7 @@ static inline void queueStimNode(uint32_t nodeIdx)
     if (stimNodeUsed >= stimNodeCount)
     {
         stimNodeCount += 500;
+        SpikeSim_BytesUsed += sizeof(uint32_t) * 500;
         stimNodes = realloc(stimNodes, sizeof(uint32_t) * stimNodeCount);
     }
     node->simTimeActv = simTime;
@@ -160,16 +171,16 @@ static inline void updExcW(connection_t *excitation, node_t *target)
     int8_t l_timingAdapt = 0; 
     uint64_t excLvl = target->excitationLvl;
     uint64_t inhLvl = target->inhibitionLvl;
-    l_timingAdapt = 16 >> (excitation->timeActv >> 2); //Connection contributed (or could have if weight was > 0) to the firing
-    l_timingAdapt -= 16>>target->timeSinceFire; //Cell fired previously within a time window
+    l_timingAdapt = (16 >> (excitation->timeActv >> 2))*(excitation->timeActv > 0); //Connection contributed (or could have if weight was > 0) to the firing
+    l_timingAdapt -= (16>>target->timeSinceFire)*(target->timeSinceFire > 0); //Cell fired previously within a time window
 
     //Number of synapses we want near each other is 4?
-    int8_t l_avoidHighExcitation = excLvl >> 8;
+    int8_t l_avoidHighExcitation = -(excLvl >> 4);
     l_avoidHighExcitation = -l_avoidHighExcitation * l_avoidHighExcitation;
 
     int8_t l_inhibitionGates = 16 >> (inhLvl >> 8);
 
-    l_dW = (l_timingAdapt * l_inhibitionGates) >> 4 + l_avoidHighExcitation;
+    l_dW = ((l_timingAdapt * l_inhibitionGates) >> 4) + l_avoidHighExcitation;
 
     clampW(excitation, l_dW);
 }
@@ -226,12 +237,14 @@ static inline void stimNode(connection_t *conn)
             {
                 node->excitationCount = 4;
                 node->excitations = malloc(sizeof(connection_t *) * node->excitationCount);
+                SpikeSim_BytesUsed += sizeof(connection_t *) * node->excitationCount;
             }
             else if (node->excitationUsed >= node->excitationCount)
             {
                 if (0xFF - node->excitationCount > 10)
                 {
                     node->excitationCount += 10;
+                    SpikeSim_BytesUsed += sizeof(connection_t *) * 10;
                 }
                 else
                 {
@@ -252,12 +265,14 @@ static inline void stimNode(connection_t *conn)
             {
                 node->inhibitionCount = 4;
                 node->inhibitions = malloc(sizeof(connection_t *) * node->inhibitionCount);
+                SpikeSim_BytesUsed += sizeof(connection_t *) * node->inhibitionCount;
             }
             else if (node->inhibitionUsed >= node->inhibitionCount)
             {
                 if (0xFF - node->inhibitionCount > 4)
                 {
                     node->inhibitionCount += 4;
+                    SpikeSim_BytesUsed += sizeof(connection_t *) * 4;
                 }
                 else
                 {
@@ -456,6 +471,7 @@ void SpikeSim_Init(uint32_t count)
     stimNodes = malloc(sizeof(node_t *) * stimNodeCount);
     nodeTotStimLvl = malloc(sizeof(int16_t) * nodeCount);
     simTime = 0;
+    SpikeSim_BytesUsed = sizeof(node_t) * nodeCount + sizeof(int16_t) * nodeCount + sizeof(node_t *) * activeNodeCount + sizeof(node_t *) * stimNodeCount;
 }
 
 static uint32_t activateStimNodes(void) {

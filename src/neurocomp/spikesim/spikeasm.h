@@ -20,5 +20,7 @@
 #include <spikenode.h>
 
 uint16_t SpikeAsm_Build(uint32_t nodeCount, uint8_t percentConnected, uint8_t percentInhibitory);
+extern uint64_t SpikeAsm_NodeCount;
+extern uint64_t SpikeAsm_ConnectionCount;
 
 #endif

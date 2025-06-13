@@ -73,4 +73,8 @@ int16_t *SpikeSim_GetSummary(uint32_t *actvNodes);
 void SpikeSim_Simulate(void);
 void SpikeSim_Init(uint32_t count);
 
+extern uint64_t SpikeSim_BytesUsed;
+extern uint32_t activeNodeUsed;
+extern uint32_t nodeUsed;
+
 #endif

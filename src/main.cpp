@@ -156,6 +156,11 @@ int main(int argc, char *argv[])
         ImGui::Text("Render Time (ms): %.3f", lastRndrTime);
         ImGui::Text("Sim Time (ms): %.3f", lastSimTime);
         ImGui::Text("GUI Update Time (ms): %.3f", lastGuiUpdTime);
+        ImGui::Text("Bytes Used: 0x%X", SpikeSim_BytesUsed);
+        ImGui::Text("Node Count: %d Size: %d", SpikeAsm_NodeCount, sizeof(node_t));
+        ImGui::Text("Active Node Count: %d", activeNodeUsed);
+        ImGui::Text("Connection Count: %d Size: %d", SpikeAsm_ConnectionCount, sizeof(connection_t));
+
 
         //Imgui demo boxes
         ImGui::Checkbox("Show ImPlot Demo", &show_implot_demo);

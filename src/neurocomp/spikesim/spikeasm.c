@@ -17,6 +17,9 @@
 #include <math.h>
 #include "spikenode.h"
 
+unsigned long long SpikeAsm_NodeCount = 0;
+unsigned long long SpikeAsm_ConnectionCount = 0;
+
 
 uint16_t SpikeAsm_Build(uint32_t nodeCount, uint8_t percentConnected, uint8_t percentInhibitory) {
     /*
@@ -40,6 +43,7 @@ uint16_t SpikeAsm_Build(uint32_t nodeCount, uint8_t percentConnected, uint8_t pe
     uint32_t connNodes = nodeCount * percentConnected / 100;
 
     SpikeSim_Init(nodeCount);
+    SpikeAsm_NodeCount = nodeCount;
     //connectsim_init(NODE_COUNT*NODE_COUNT);
     //connection_t *outs = connect_new(nodes, connect_TYPE_AXON, 5, 50, 0);
     node_t *nodes;
@@ -76,6 +80,7 @@ uint16_t SpikeAsm_Build(uint32_t nodeCount, uint8_t percentConnected, uint8_t pe
             connection_t *conn;
             SpikeSim_CreateConnection(nodeIdx, targetIdx, weight, div, time, inhibitory);
         }
+        SpikeAsm_ConnectionCount += connNodes;
     }
 
     return 1;

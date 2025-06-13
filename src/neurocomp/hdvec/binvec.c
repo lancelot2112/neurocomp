@@ -67,11 +67,7 @@ uint32_t binvec_countbits(binvec_t *a){
   uint32_t count = 0;
   uint32_t temp;
   for(int i = 0; i < a->segCount; i++){
-    temp = a->data[i];
-    while(temp){
-      count++;
-      temp = temp & (temp - 1);
-    }
+    count += __builtin_popcount(a->data[i]);
   }
   return count;
 }
